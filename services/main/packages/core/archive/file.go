@@ -1,0 +1,151 @@
+// Copyright (c) 2020 Wind River Systems, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at:
+//       http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software  distributed
+// under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES
+// OR CONDITIONS OF ANY KIND, either express or implied.
+
+package archive
+
+import (
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
+	"io"
+	"os"
+
+	"wrs/tk/packages/blob"
+
+	"wrs/tk/packages/blob/file"
+
+	"github.com/gabriel-vasile/mimetype"
+	"github.com/pkg/errors"
+)
+
+type File struct {
+	Name        string
+	Path        string
+	Md5         [16]byte // 32
+	Sha1        [20]byte // 40
+	Sha256      [32]byte // 64
+	Size        int64
+	IsRegular   bool
+	IsSymLink   bool
+	IsNamedPipe bool
+}
+
+func (f File) SymLinkInt() int {
+	if f.IsSymLink {
+		return 1
+	}
+
+	return 0
+}
+
+func (f File) NamedPipeInt() int {
+	if f.IsNamedPipe {
+		return 1
+	}
+
+	return 0
+}
+
+func NewFile(filePath string) (*File, error) {
+	stat, err := os.Lstat(filePath)
+	if err != nil {
+		err = errors.Wrapf(err, "error stating %s", filePath)
+		return nil, err
+	}
+
+	ret := new(File)
+	ret.Name = stat.Name()
+	ret.Path = filePath
+	ret.IsRegular = stat.Mode().IsRegular()
+	ret.IsSymLink = (stat.Mode() & os.ModeSymlink) > 0
+	ret.IsNamedPipe = (stat.Mode() & os.ModeNamedPipe) > 0
+	ret.Size = stat.Size()
+
+	if ret.Size == 0 || !stat.Mode().IsRegular() {
+		copy(ret.Md5[:], md5.New().Sum(nil))       // empty md5
+		copy(ret.Sha1[:], sha1.New().Sum(nil))     // empty sha1
+		copy(ret.Sha256[:], sha256.New().Sum(nil)) // empty sha256
+	} else {
+		md5 := md5.New()
+		sha1 := sha1.New()
+		sha256 := sha256.New()
+
+		f, err := os.Open(filePath)
+		if err != nil {
+			err = errors.Wrapf(err, "error opening file %s", filePath)
+			return ret, err
+		}
+		defer f.Close()
+
+		for {
+			buf := make([]byte, 64)
+
+			n, err := f.Read(buf)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				err = errors.Wrapf(err, "error chunking %s", filePath)
+				return ret, err
+			}
+
+			buf = buf[:n]
+
+			if _, err := md5.Write(buf); err != nil {
+				err = errors.Wrapf(err, "error writing chunk to md5")
+				return ret, err
+			}
+			if _, err := sha1.Write(buf); err != nil {
+				err = errors.Wrapf(err, "error writing chunk to sha1")
+				return ret, err
+			}
+			if _, err := sha256.Write(buf); err != nil {
+				err = errors.Wrapf(err, "error writing chunk to sha256")
+				return ret, err
+			}
+		}
+
+		copy(ret.Md5[:], md5.Sum(nil))       // finish md5
+		copy(ret.Sha1[:], sha1.Sum(nil))     // finish sha1
+		copy(ret.Sha256[:], sha256.Sum(nil)) // finish sha256
+	}
+
+	return ret, nil
+}
+
+func StoreFile(blobStorage blob.Storage, f *File, filePath string) error {
+	// Only store if file is a normal file greater than 0 bytes
+	if !f.IsRegular || f.Size < 1 {
+		return nil
+	}
+
+	mimeType, err := mimetype.DetectFile(f.Path)
+	if err != nil {
+		err = errors.Wrap(err, "error detecting mimetype")
+		return err
+	}
+
+	r, err := os.Open(filePath)
+	if err != nil {
+		err = errors.Wrapf(err, "error opening file")
+		return err
+	}
+	defer r.Close()
+
+	if err := blobStorage.Store(r, &file.FileInfo{
+		Sha256:   file.Sha256(f.Sha256),
+		Sha1:     file.Sha1(f.Sha1),
+		Size:     f.Size,
+		MimeType: mimeType.String(),
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}

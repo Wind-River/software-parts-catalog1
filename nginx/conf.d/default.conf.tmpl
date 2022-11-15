@@ -1,0 +1,75 @@
+server {
+    listen       80;
+    listen  [::]:80;
+    server_name {{with .Env.DOCKER_SERVER_NAME}}{{.}}{{else}}localhost{{end}};
+
+    #access_log  /var/log/nginx/host.access.log  main;
+
+    root /usr/share/nginx/html/;
+    location /app {
+        include /etc/nginx/conf.d/app.location;
+    }
+
+    location / {
+        # We are using try_files to switch location to either @websocket or @ based on the Upgrade header
+        # If the set Upgrade header is unrecognized, it should fall back to @
+        try_files /404.html @$http_upgrade;
+    }
+
+    location @websocket {
+        proxy_pass http://main:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 30m;
+
+        # WebSocket settings
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade websocket;
+        proxy_set_header Connection Upgrade;
+
+        proxy_set_header X-Location websocket; # for debugging server-side which location block was used
+    }
+
+    location @ {
+        proxy_pass http://main:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 30m;
+
+        proxy_set_header X-Location @; # for debugging server-side which location block was used
+        client_max_body_size 4G;
+    }
+
+    #error_page  404              /404.html;
+
+    # redirect server error pages to the static page /50x.html
+    #
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+
+    # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+    #
+    #location ~ \.php$ {
+    #    proxy_pass   http://127.0.0.1;
+    #}
+
+    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+    #
+    #location ~ \.php$ {
+    #    root           html;
+    #    fastcgi_pass   127.0.0.1:9000;
+    #    fastcgi_index  index.php;
+    #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+    #    include        fastcgi_params;
+    #}
+
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
+}
+

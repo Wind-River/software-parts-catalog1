@@ -1,0 +1,17 @@
+**/package-lock.json
+Gopkg.lock
+**/*.key
+target
+!vendor/lib
+uploads
+**/*_vfsgen.go
+node_modules/
+src/vue/dist
+bin/
+dist/
+secrets/
+services/db/docker-entrypoint-initdb.d/restore/tkdb/*
+services/db/docker-entrypoint-initdb.d/restore/blob/*
+.env
+compose.yaml
+.vscode/*

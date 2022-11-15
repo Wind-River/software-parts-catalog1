@@ -1,0 +1,58 @@
+<div style="padding: 10px !important">
+	<!--<p>Form value: {{ searchForm.value | json }}</p>
+	<p>Form status: {{ searchForm.status | json }}</p>-->
+	<!--<p>Test: {{ rows }}</p>-->
+	<div *ngIf="row">
+		<table class="table table-bordered table-striped table-responsive" style="width:100%; padding:10px !important;">
+			<thead class="thead-inverse">
+				<tr class="row">
+					<th>Field</th>
+					<th>Value</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr class="row">
+					<td>File Count</td>
+					<td>{{row.count}}</td>
+				</tr>
+				<tr class="row">
+					<td>Date</td>
+					<td>{{row.date.substr(0,10)}}</td>
+				</tr>
+				<tr class="row">
+					<td>License</td>
+					<td>{{row.expression}}</td>
+				</tr>
+				<tr class="row">
+					<td>Rationale</td>
+					<td>{{row.rationale}}</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div *ngIf="archives && row">
+		<table class="table table-bordered table-striped table-responsive" style="width:100%; padding:10px !important;">
+			<thead class="thead-inverse">
+				<tr class="row">
+					<th>Name</th>
+					<th>Sha1</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr *ngFor="let r of archives; let i=index" class="row">
+					<td>{{ r.name }}</td>
+					<td>{{ row.checksum_sha1 }}</td>
+					<td><button type="button" class="btn btn-primary" (click)="serveSource(r.path, r.name)">Download</button></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div *ngIf="isLoading">
+		<p>
+			Loading...
+		</p>
+	</div>
+</div>

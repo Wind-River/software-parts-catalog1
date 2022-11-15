@@ -1,0 +1,20 @@
+[server]
+daemon = true
+frontend = "/opt/tk/vue"
+upload = "/opt/tk/uploads"
+threads = {{with .Env.THREADS}}{{.}}{{else}}1{{end}}
+secrets = "{{with .Env.SECRETS}}{{.}}{{else}}/var/run/secrets{{end}}"
+
+[bus]
+host = "{{with .Env.BUS_HOST}}{{.}}{{end}}"
+
+[frontdoor]
+host = "{{with .Env.FRONTDOOR_HOST}}{{.}}{{end}}"
+
+[blob]
+endpoint = "{{with .Env.S3_ENDPOINT}}{{ . }}{{end}}"
+region = "{{with .Env.S3_REGION}}{{ . }}{{end}}"
+bucket = "{{with .Env.S3_BUCKET}}{{ . }}{{end}}"
+id = "{{ with .Env.S3_USER}}{{ . }}{{end}}"
+secret = "{{ with .Env.S3_SECRET}}{{ . }}{{end}}"
+token = "{{ with .Env.S3_TOKEN}}{{ . }}{{end}}"

@@ -1,0 +1,71 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+type Query {
+  test_archive: Archive!
+  archive(id: Int64, sha256: String, sha1: String, name: String): Archive
+  find_archive(query: String!, method: String): [ArchiveDistance!]!
+  file_collection(id: Int64, sha256: String, sha1: String, name: String): FileCollection
+  archives(id: Int64, vcode: String): [Archive!]!
+  file_count(id: Int64, vcode: String): Int64!
+}
+
+scalar Upload
+
+type Mutation {
+  uploadArchive(file: Upload!, name: String): UploadedArchive!
+  updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
+  updateFileCollection(verificationCode: String!, license: String, licenseRationale: String, familyString: String): FileCollection
+}
+
+scalar Int64
+scalar Time
+
+type Archive {
+  id: Int64!
+  file_collection_id: Int64
+  file_collection: FileCollection
+  name: String
+  path: String
+  size: Int64
+  sha1: String
+  sha256: String
+  md5: String
+  insert_date: Time!
+  extract_status: Int!
+}
+
+type ArchiveDistance {
+  distance: Int64!
+  archive: Archive!
+}
+
+type FileCollection {
+  id: Int64
+  insert_date: Time
+  group_container_id: Int64
+  flag_extract: Boolean
+  flag_license_extract: Boolean
+  license_id: Int64
+  license: License
+  license_rationale: String
+  analyst_id: Int64
+  license_expression: String
+  license_notice: String
+  copyright: String
+  verification_code_one: String
+  verification_code_two: String
+}
+
+type License {
+  id: Int64!
+  name: String!
+  group_id: Int64
+  group_name: String
+}
+
+type UploadedArchive {
+  extracted: Boolean!
+  archive: Archive
+}

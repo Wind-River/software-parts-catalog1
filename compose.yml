@@ -1,0 +1,70 @@
+services:
+  main:
+    depends_on:
+      - db
+      - object-storage
+    build: ./services/main
+    volumes:
+      - uploads:/opt/tk/uploads/
+    secrets:
+      - db
+      - key
+      - blob
+    environment:
+      DB_HOST: "${DB_HOST-db}"
+      DB_PORT: "${DB_PORT-5432}"
+      S3_ENDPOINT: "${S3_ENDPOINT:-object-storage:9000}"
+      S3_REGION: "${S3_REGION-docker}"
+      S3_BUCKET: "${S3_BUCKET-storage}"
+      S3_USER: "${S3_USER-testuser}"
+      S3_SECRET: "${S3_SECRET-testsecret}"
+  db:
+    build: ./services/db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_INITDB_ARGS='-E UTF8'
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=sql
+    volumes:
+      - database:/var/lib/postgresql/data
+    ports:
+      - "5432"
+  object-storage:
+    image: bitnami/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${S3_USER-testuser}
+      - MINIO_ROOT_PASSWORD=${S3_SECRET-testsecret}
+      - MINIO_DEFAULT_BUCKETS=${S3_BUCKET-storage}
+    volumes:
+      - objects:/data
+  nginx:
+    build: ./services/nginx
+    environment:
+      - DOCKER_SERVER_NAME=localhost
+      - USE_SSL=${USE_SSL}
+    ports:
+      - "80:80"
+      - "443:443"
+    secrets:
+    - ssl_certificate
+    - ssl_certificate_key
+## By default this config uses default local driver,
+## For custom volumes replace with volume driver configuration.
+volumes:
+  uploads:
+  database:
+  objects:
+secrets:
+  db:
+    file: ./default_secrets/db.json
+  key:
+    file: ./default_secrets/aes.key
+  blob:
+    file: ./default_secrets/blob.json
+  ssl_certificate:
+    file: ./default_secrets/ssl.crt
+  ssl_certificate_key:
+    file: ./default_secrets/ssl_crt.key

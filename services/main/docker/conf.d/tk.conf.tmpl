@@ -1,0 +1,11 @@
+[program:tk]
+directory=/opt/tk/
+command=/opt/tk/server-linux-amd64.bin --config /etc/supervisor/conf.d/tk.toml
+group=highlander
+autostart=false
+autorestart=unexpected
+exitcodes=0,2
+redirect_stderr=true
+stdout_logfile=/var/log/highlander/%(program_name)s.log
+stdout_logfile_maxbytes=1GB
+stdout_logfile_backups=10
