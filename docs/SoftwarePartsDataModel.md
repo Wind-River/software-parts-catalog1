@@ -15,7 +15,7 @@ The catalog stores specific intrinsct data for each software part. For example, 
 | Type              | Comprised Of* | Examples | Notes |
 |-------------------| ------------ | -------- | ----- |
 | /part/file/src      | n/a | main.c, main.js      | Uploaded as an archive of 1 file |
-| /part/file/binary/app       | True | app.exe     | Uploaded as an archive of 1 file |
+| /part/file/binary/app       | link | app.exe     | Uploaded as an archive of 1 file |
 | /part/file/collection/archive | link | busybox.1.31.2.tar.gz |  |
 | /part/file/binary/container   | link | |  |
 | /part/collection/contents     | logical | MS Outlook, MS Office Suite | Complex composite product |
@@ -57,10 +57,12 @@ Therefore each catalog should be assiged a unique instance name.
     - **4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855** -> fvc://4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
     - 
 ### Part Alises
-One may want to provide a human readbale identification to a part. One could specific an alpha-numberic string with '-' and '_'. Typically what you would use for a programe variable. It would take on the following format:
-  aliasid://<catalog-is>/<alias-id>
-  
-- **vxworks-22.09** -> alias://windriver.com/spc/vxworks-22.09
+One may want to provide a human readbale identification to a part. One could specific an alpha-numberic string that can include '-' and '_'. That is characters you would typically use for a programe variable. It would take on the following format:
+  ```
+  partalais://<catalog-is>/<alias-id>
+  ```
+For example for a product name VxWorks7 version 22.09 you might define the following alias 
+- **vxworks-22.09** -> partalias://windriver.com/spc/vxworks-22.09
 
 ## Licensing & License Expressions
 Licensing information is an intrinsic attribute of each software part and therefore the Software Parts Catalog (SPC) needs a way to represent and store this information. Although there are some standards around how to name a collection of commonly used licenses (e.g., SPDX license list) there is no standard on how to represent the universe of all possible licenses an organization can find in the wild. Although the SPDX license provides a solid foundation for standardizing on the most commonly used licenses, it is not sufficient to represent the myriad of licenses an organization will encounter. The SPC mission is to deliver a catalog platform to represent all the software parts used by an organization which must include a mechanism to represent all licenses they will encounter include third-party commercial licenses. For example, as of September 2022 the SPDX license list has 400+ licenses yet Wind River has identified over 1800 unique licenses (and growing). 
