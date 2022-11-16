@@ -1,21 +1,22 @@
 ## Software Parts Data Model
 
-Maintaining a catalog of software components (parts) is a requirement whether generating SBOMs for managing license compliance, security assurance, export control, or safety certification. We developed a highly searchable scalable software parts database (catalog) enabling companies to seamlessly manage 1000s, 10,000s if not 100,000s of software parts from which their products are comprised. The catalog stores specific intrinsct data for each software part. For example, name, version, content (binary or source code), size, the licensing, legal notices, cve information and so forth. 
+Maintaining a catalog of software components (parts) is a requirement whether generating SBOMs for managing license compliance, security assurance, export control, or safety certification. We developed a highly searchable scalable software parts database (catalog) enabling companies to seamlessly manage 1000s, 10,000s if not 100,000s of software parts from which their products are comprised. The catalog stores specific intrinsic data for each software part. For example, id, name, version, content (binary or source code), size, the licensing, legal notices, CVE information and so forth. 
 
-A software part is any software component that represents a set of software files from which larger softwate solutions are comprised. Our definition supports a wide range of software types (parts). A part can be:
+A software part is any software component that represents a set of software files from which larger software solutions are comprised. Our definition supports a wide range of software types (parts). A part can be:
   - single source file (e.g., main.c)
   - single runtime binary file (e.g., app.exe)
   - a container image file 
-  - a collection of parts (files)  - i.e., an archive of two  or more smaller software parts (e.g., busybox.1.32.1.tar.gz, file.rpm). It may include source, binary files, other archives and/or container images. 
-  - a container's content - (e.g., a collection of arhives, source files and binaries)
+  - a collection of parts (files)  - i.e., an archive of two  or more smaller software parts (e.g., busybox.1.32.1.tar.gz, file.rpm). It may include source, binary files, linbrary files, other archives and/or container images. 
+  - a container's content - (e.g., a collection of archives, source files and binaries)
 
-The catalog stores specific intrinsct data for each software part. For example, the license
+The catalog stores specific intrinsic data for each software part. For example, the license
 
 ## Part Types
 | Type              | Comprised Of* | Examples | Notes |
 |-------------------| ------------ | -------- | ----- |
 | /part/file/src      | n/a | main.c, main.js      | Uploaded as an archive of 1 file |
 | /part/file/binary/app       | link | app.exe     | Uploaded as an archive of 1 file |
+| /part/file/binary/library     | link | libdb.so     | Uploaded as an archive of 1 file |
 | /part/file/collection/archive | link | busybox.1.31.2.tar.gz |  |
 | /part/file/binary/container   | link | |  |
 | /part/collection/contents     | logical | MS Outlook, MS Office Suite | Complex composite product |
@@ -44,37 +45,36 @@ The catalog stores specific intrinsct data for each software part. For example, 
 - List of alternative external links/references*
 
 
-
 ## Catalog & Part IDs (Identification) 
-Software parts stored in the catalog should have a  unique id which identifies both the catalog instance and the part within that instance. Each instance of the catalog is given a unique identifier with the following format:
+Software parts have a  unique id which identifies both the catalog instance where it is stored along with a pointer (id) to the part record within the catalog. Therefor each instance of the catalog is given a unique identifier with the following format:
   ```
     [domain-name]/[catalog-instance-id]
   ```
 Where:
-- **[domain-name]** is a unique human readable alphanumeric string that uniquley identifies the organization that created/maintains one or more catalog instances. A registery will eventually be maintained where organizations can register their organizatin identifiers. 
-- **[catalog-instance-id]** is a unique alphanumeric string that uniquley identifies an instance of a catalog maintained by the organization. 
+- **[domain-name]** is a unique human readable alphanumeric string that uniquely identifies the organization that created/maintains one or more catalog instances. A registry will eventually be maintained where organizations can register their organization identifiers. 
+- **[catalog-instance-id]** is a unique alphanumeric string that uniquely identifies an instance of a catalog maintained by the organization. 
 
-For example, Ford might have the following:
+For example, Ford might maintain the following internal instance identified as:
   ford.com/dev-catalog
   
-  If Ford hosted two different instances of the catalog it would assign two different names - e.g.,
+Or Ford may choose to hosted two or more different instances of a catalog and therefore it would assign different names to each instance - e.g.,
   - ford.com/dev-catalog - internal engineering instance
-  - ford.com/public-1 - public demo instance
+  - ford.com/public-1 - publically available instance available to its suppliers
  
 Individual parts stored in the catalog have the following format:
 
 ```
   partid://[domain-name]/[catalog-instance-id]/UUID
 ```
-Where the **UUID** is the database primary key id of the part. For example if the part in a catalog had the following UUID: **2503451233** the part would have the following externally referencable id:
+Where the **UUID** is the database primary key of the part. For example, if the part in a catalog had the following UUID: **2503451233** the part would have the following externally referenceable id:
 ```
 partid://ford.com/public-1/2503451233
 ```
-If a file verification code is available for part then the part could also be indentified by the following id:
+If a file verification code is available for a part, then the part could also be identified by the following id:
 ```
 fvc://[domain-name]/[catalog-instance-id]/[fvc]
 ```
-Where **[fvc]** represents the the file verification code of a part (if it has one). For instance if our current instance of the parts catalog is referenced as: **ford.com/public-1** with a part having the following fvc:
+Where **[fvc]** represents the file verification code of a part (if it has one). For example, if our current instance of the parts catalog is referenced as: **ford.com/public-1** with a part having the following fvc:
 ```
 4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 ```
