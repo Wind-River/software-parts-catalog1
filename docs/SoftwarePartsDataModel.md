@@ -25,6 +25,7 @@ The catalog stores specific intrinsct data for each software part. For example, 
 
 ### List of Part Data fields
 - UUID
+- Type
 - Name (e.g., busybox -> busybox-1.32.5.tar.gz)
 - Version (optional) (e.g., 1.32.5)
 - Family Name (e.g., /busybox/1.x)
