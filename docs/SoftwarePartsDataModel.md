@@ -17,9 +17,9 @@ The catalog stores specific intrinsic data for each software part. For example, 
 | /part/file/src      | n/a | main.c, main.js      | Uploaded as an archive of 1 file |
 | /part/file/binary/app       | link | app.exe     | Uploaded as an archive of 1 file |
 | /part/file/binary/library     | link | libdb.so     | Uploaded as an archive of 1 file |
-| /part/file/collection/archive | link | busybox.1.31.2.tar.gz |  |
+| /part/file/collection | link | busybox.1.31.2.tar.gz |  |
 | /part/file/binary/container   | link | |  |
-| /part/collection/contents     | logical | MS Outlook, MS Office Suite | Complex composite product |
+| /part/collection/contents     | logical | vxworks7-22.09, wr-studio-22.06 | Complex composite product |
 | /part/file/binary/runtime     | link | linux runtime binary | Uploaded as an archive of 1 file |
 
 *The 'comprised of' column notes whether the type may have a link to a list of sub parts or logical structure (e.g., logical tree structure). 
