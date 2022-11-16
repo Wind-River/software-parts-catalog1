@@ -2,7 +2,7 @@
 
 Maintaining a catalog of software components (parts) is a requirement whether generating SBOMs for managing license compliance, security assurance, export control, or safety certification. We developed a highly searchable scalable software parts database (catalog) enabling companies to seamlessly manage 1000s, 10,000s if not 100,000s of software parts from which their products are comprised. The catalog stores specific intrinsic data for each software part. For example, id, name, version, content (binary or source code), size, the licensing, legal notices, CVE information and so forth. 
 
-A software part is any software component that represents a set of software files from which larger software solutions are comprised. Our definition supports a wide range of software types (parts). A part can be:
+A software part is any software component that represents a set of one or more software files from which larger software solutions may be comprised. Our definition supports a wide range of software types (parts). A part can be:
   - single source file (e.g., main.c)
   - single runtime binary file (e.g., app.exe)
   - a container image file 
@@ -54,12 +54,12 @@ Where:
 - **[domain-name]** is a unique human readable alphanumeric string that uniquely identifies the organization that created/maintains one or more catalog instances. A registry will eventually be maintained where organizations can register their organization identifiers. 
 - **[catalog-instance-id]** is a unique alphanumeric string that uniquely identifies an instance of a catalog maintained by the organization. 
 
-For example, Ford might maintain the following internal instance identified as:
-  ford.com/dev-catalog
+For example, The Telsa Motors (Telsa) might maintain the following internal instance identified as:
+  tesla.com/dev-catalog
   
-Or Ford may choose to hosted two or more different instances of a catalog and therefore it would assign different names to each instance - e.g.,
-  - ford.com/dev-catalog - internal engineering instance
-  - ford.com/public-1 - publically available instance available to its suppliers
+Or Tesla may choose to hosted two or more different instances of a catalog and therefore it would assign different names to each instance - e.g.,
+  - tesla.com/dev-catalog - internal engineering instance
+  - tesla.com/public-1 - publically available instance available to its suppliers
  
 Individual parts stored in the catalog have the following format:
 
@@ -68,19 +68,19 @@ Individual parts stored in the catalog have the following format:
 ```
 Where the **UUID** is the database primary key of the part. For example, if the part in a catalog had the following UUID: **2503451233** the part would have the following externally referenceable id:
 ```
-partid://ford.com/public-1/2503451233
+partid://tesla.com/public-1/2503451233
 ```
 If a file verification code is available for a part, then the part could also be identified by the following id:
 ```
 fvc://[domain-name]/[catalog-instance-id]/[fvc]
 ```
-Where **[fvc]** represents the file verification code of a part (if it has one). For example, if our current instance of the parts catalog is referenced as: **ford.com/public-1** with a part having the following fvc:
+Where **[fvc]** represents the file verification code of a part (if it has one). For example, if our current instance of the parts catalog is referenced as: **tesla.com/public-1** with a part having the following fvc:
 ```
 4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 ```
 then the following id would also unique identify the part:
 ```
-fvcid://ford.com/public-1/4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+fvcid://tesla.com/public-1/4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 ```
 
 ### Part Alises
