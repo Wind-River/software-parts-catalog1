@@ -45,23 +45,52 @@ The catalog stores specific intrinsct data for each software part. For example, 
 
 
 
-## Part IDs (Identification) 
-Software parts stored in the catalog should have a  unique id with respect to a specific instance of the catalog. Each instance of the catalog is given a unique identifier (e.g., windriver.com/spc) that incoprates the indentify of the organization that hosts it. For example, if Wind River hosted two different instances it would assign two different names - 
-  - /windriver.com/spc - internal engineering production instance
-  - /windriver.com/public - public demo instance
+## Catalog & Part IDs (Identification) 
+Software parts stored in the catalog should have a  unique id which identifies both the catalog instance and the part within that instance. Each instance of the catalog is given a unique identifier with the following format:
+  ```
+    [domain-name]/[catalog-instance-id]
+  ```
+Where:
+- **[domain-name]** is a unique human readable alphanumeric string that uniquley identifies the organization that created/maintains one or more catalog instances. A registery will eventually be maintained where organizations can register their organizatin identifiers. 
+- **[catalog-instance-id]** is a unique alphanumeric string that uniquley identifies an instance of a catalog maintained by the organization. 
 
-Therefore each catalog should be assiged a unique instance name. 
-  - Every part has a catalog (db) id. 
-    - **2503451233** -> partid://windriver.com/spc/2503451233
-      Our current instance of the parts catalog is referenced as: **windriver.com/spc**
-    - **4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855** -> fvc://4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-    - 
+For example, Ford might have the following:
+  ford.com/dev-catalog
+  
+  If Ford hosted two different instances of the catalog it would assign two different names - e.g.,
+  - ford.com/dev-catalog - internal engineering instance
+  - ford.com/public-1 - public demo instance
+ 
+Individual parts stored in the catalog have the following format:
+
+```
+  partid://[domain-name]/[catalog-instance-id]/UUID
+```
+Where the **UUID** is the database primary key id of the part. For example if the part in a catalog had the following UUID: **2503451233** the part would have the following externally referencable id:
+```
+partid://ford.com/public-1/2503451233
+```
+If a file verification code is available for part then the part could also be indentified by the following id:
+```
+fvc://[domain-name]/[catalog-instance-id]/[fvc]
+```
+Where **[fvc]** represents the the file verification code of a part (if it has one). For instance if our current instance of the parts catalog is referenced as: **ford.com/public-1** with a part having the following fvc:
+```
+4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+```
+then the following id would also unique identify the part:
+```
+fvcid://ford.com/public-1/4656433200e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+```
+
 ### Part Alises
 One may want to provide a human readbale identification to a part. One could specific an alpha-numberic string that can include '-' and '_'. That is characters you would typically use for a programe variable. It would take on the following format:
   ```
-  partalais://<catalog-is>/<alias-id>
+  alaisid://[domain-name]/[catalog-instance-id]/[alias]
   ```
-For example for a product name VxWorks7 version 22.09 you might define the following alias 
+Where **[alias]** is a unique human readable alphanumeric string that uniquley identifies the part with inthe context of a specific catalog instance. 
+
+For example for a product name VxWorks7 version 22.09 maintained by Wind R you might define the following alias 
 - **vxworks-22.09** -> partalias://windriver.com/spc/vxworks-22.09
 
 ## Licensing & License Expressions
