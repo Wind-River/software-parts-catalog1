@@ -10,6 +10,7 @@ src/vue/dist
 bin/
 dist/
 secrets/
+!secrets/default_secrets/
 services/db/docker-entrypoint-initdb.d/restore/tkdb/*
 services/db/docker-entrypoint-initdb.d/restore/blob/*
 .env
