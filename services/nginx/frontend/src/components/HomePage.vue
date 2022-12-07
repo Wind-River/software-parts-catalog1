@@ -14,20 +14,11 @@
         label="Query:"
         class="d-block"
         v-model="searchQuery"
-        :rules="[v => v.length > 1 || 'Minimum Query Length is 2 Characters']"
+        :rules="[(v) => v.length > 1 || 'Minimum Query Length is 2 Characters']"
         @keyup.enter="search"
         append-inner-icon="mdi-magnify"
         @click:append-inner="search"
       ></v-text-field>
-      <!-- <v-checkbox
-        id="search-auto-fill"
-        label="Auto Update File Counts"
-        v-model="autofill"
-      ></v-checkbox> -->
-      <!-- <input id="search-depth" type="checkbox" v-model="deep">
-      <label for="search-depth">Deep File Query</label> -->
-      <!-- <input id="search-ws" type="checkbox" v-model="useWebSocket">
-      <label for="search-ws">Use WebSocket</label> -->
       <br />
       <h3 v-if="fetching" class="my-4">Loading</h3>
       <h3 v-if="queryError" class="my-4">{{ queryError }}</h3>
@@ -65,16 +56,6 @@
           <td>
             {{ row.archive.extract_status === 0 ? "Complete" : "In Progress" }}
           </td>
-          <!-- <td @click="redirect(archive.id)">{{ archive.name }}</td>
-          <td v-if="archive.depth == 'shallow'" @click="updateCount(parseInt(index.toString()))">
-            {{ archive.count }}<sup v-if="archive.loading" class="waiting">*</sup
-            ><sup v-else class="ready">?</sup>
-          </td>
-          <td v-else @click="redirect(archive.id)">{{ archive.count }}</td>
-          <td @click="redirect(archive.id)">
-            {{ archive.date.substring(0, 10) }}
-          </td>
-          <td @click="redirect(archive.id)">{{ archive.sha1 }}</td> -->
         </tr>
       </tbody>
     </v-table>
@@ -85,18 +66,8 @@
 import { Ref, ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useQuery } from "@urql/vue";
-import {
-  PackageRow,
-  PackageSearchService,
-  NewPackageSearchService,
-} from "../services/PackageSearch";
 
 const searchQuery: Ref<string> = ref("");
-// const rows: Ref<PackageRow[]> = ref([]);
-// const service: PackageSearchService = NewPackageSearchService(
-//   "WebSocket" in window || "MozWebSocket" in window,
-//   window.location.host
-// );
 const router = useRouter();
 const result = useQuery({
   query: `
@@ -123,53 +94,10 @@ const fetching = result.fetching;
 const queryError = result.error;
 
 function search() {
-  if (searchQuery.value.length > 1){
+  if (searchQuery.value.length > 1) {
     result.executeQuery();
-  }
-  else return
+  } else return;
 }
-// const autofill: Ref<boolean> = ref(false);
-// const rowCount = computed(function getRowCount(): number {
-//   if (rows.value === undefined || rows.value === null) {
-//     return 0;
-//   }
-
-//   return rows.value.length;
-// });
-// const loading = computed(function getLoading(): boolean {
-//   if (service !== undefined) {
-//     return service.loading;
-//   }
-//   return false;
-// });
-
-// function search(): void {
-//   // rows.value = [];
-//   // service.search(rows.value, searchQuery.value, autofill.value);
-// }
-
-// async function updateCount(index: number): Promise<boolean> {
-//   rows.value[index].loading = true;
-//   var row = rows.value[index];
-
-//   try {
-//     const response = await fetch(
-//       new Request(`/api/container/${row.id}`, {
-//         method: "GET",
-//         mode: "same-origin",
-//       })
-//     );
-//     const object = await response.json();
-//     rows.value[index].depth = "deep";
-//     rows.value[index].count = object.count;
-//     rows.value[index].loading = false;
-//     return true;
-//   } catch (err) {
-//     rows.value[index].loading = false;
-//     console.error(err);
-//     return false;
-//   }
-// }
 
 function redirect(id: number): void {
   router.push({

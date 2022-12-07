@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "serve": "vite preview",
@@ -10,21 +10,19 @@
     "dev": "vite"
   },
   "dependencies": {
-    "@mdi/font": "5.9.55",
-    "@uppy/core": "^1.17.0",
-    "@uppy/drag-drop": "^1.4.27",
-    "@uppy/xhr-upload": "^1.7.2",
+    "@mdi/font": "7.0.96",
+    "@urql/exchange-multipart-fetch": "^1.0.1",
     "@urql/vue": "^1.0.2",
     "core-js": "^3.6.5",
     "downloadjs": "^1.4.7",
     "graphql": "^16.6.0",
     "register-service-worker": "^1.7.1",
     "roboto-fontface": "*",
-    "string-similarity": "^1.2.0",
+    "string-similarity": "^4.0.4",
     "vue": "^3.0.0",
     "vue-class-component": "^8.0.0-0",
     "vue-router": "^4.0.0-0",
-    "vuetify": "npm:@vuetify/nightly@next",
+    "vuetify": "^3.0.0",
     "vuex": "^4.0.0-0",
     "webfontloader": "^1.0.0"
   },

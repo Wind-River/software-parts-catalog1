@@ -26,46 +26,10 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/Update.vue')
   },
   {
-    path: '/container',
-    name: 'Package Search',
-    component: () => import('../views/PackageSearch.vue')
-  },
-  {
     path: '/container/:id',
     name: 'Package Detail',
     component: () => import('../views/PackageDetail.vue')
   },
-  {
-    path: '/group',
-    name: 'Group Search',
-    component: () => import('../views/GroupSearch.vue')
-  },
-  {
-    path: '/group/:id',
-    name: 'Group Detail',
-    component: () => import('../views/GroupDetail.vue')
-  },
-  {
-    path: '/missing',
-    name: 'Missing',
-    component: () => import('../views/Missing.vue')
-  },
-  {
-    path: '/archive',
-    name: 'Archive',
-    component: () => import('../views/Delete.vue')
-  },
-  {
-    path: '/parts',
-    name: 'List Parts',
-    component: () => import('../views/Parts.vue')
-  },
-  {
-    path: '/parts/:identifier',
-    name: 'View Part',
-    props: true,
-    component: () => import('../views/Part.vue')
-  }
 ]
 
 const router = createRouter({

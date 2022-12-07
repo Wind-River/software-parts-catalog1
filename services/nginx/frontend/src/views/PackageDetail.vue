@@ -143,11 +143,6 @@ const fcFetching = fileCollectionQuery.fetching;
 const error: Ref<string> = ref("Uninitialized Error");
 const route = useRoute();
 
-// const dateString = computed(function getDateString(): string {
-//   var d = new Date(fcData.value.file_collection.insert_date);
-//   return `${d.getUTCFullYear()}-${d.getUTCMonth()}-${d.getUTCDate()} UTC`;
-// });
-
 function downloadArchive(id: number, name: string, depth = 0) {
   // var ok = true
   var ctype = "";
@@ -170,7 +165,7 @@ function downloadArchive(id: number, name: string, depth = 0) {
       if (depth < 3) {
         downloadArchive(id, name, depth + 1);
       } else {
-        error.value = JSON.stringify(err);
+        error.value = "Unable to retrieve download from server";
         showModal.value = true;
       }
     })
@@ -191,28 +186,6 @@ onBeforeMount(function () {
 
   cid.value = parseInt(id);
 });
-
-// onMounted(function () {
-//   fetch(
-//     new Request(`/api/container/${cid.value}`, {
-//       method: "GET",
-//       mode: "same-origin",
-//     })
-//   )
-//     .then((response) => {
-//       console.log("have response");
-//       return response.json();
-//     })
-//     .then((object) => {
-//       console.log("parsed json");
-//       data.value = object;
-//       loaded.value = true;
-//     })
-//     .catch((err) => {
-//       console.log("caught error");
-//       alert(JSON.stringify(err));
-//     });
-// });
 </script>
 
 <style></style>
