@@ -53,7 +53,7 @@ type UpdateCSV = {
   verification_code: string;
 };
 
-const uploadedCSV: Ref<any[]> = ref([]);
+const uploadedCSV: Ref<UpdateCSV[]> = ref([]);
 const processing: Ref<boolean> = ref(false);
 const showDialog: Ref<boolean> = ref(false);
 
@@ -68,36 +68,23 @@ const updateMutation = useMutation(`
   }
 `);
 
-function parseCSV(file: File) {
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    if (typeof event.target?.result === "string") {
-      const resultString: string = event.target!.result;
-      uploadedCSV.value.push(...csvToArray(resultString));
-      for (const csv of uploadedCSV.value) {
-        updateMutation
-          .executeMutation({
-            verificationCode: csv.verification_code,
-            license: csv.license,
-            licenseRationale: csv.license_rationale,
-          })
-          .then(() => {
-            processing.value = false;
-            showDialog.value = true;
-          })
-          .catch((error) => {
-            console.log(error);
-          });
+function parseCSV(file: File): Promise<UpdateCSV[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === "string") {
+        const resultString: string = event.target!.result;
+        uploadedCSV.value.push(...csvToArray(resultString));
+        resolve(uploadedCSV.value);
+      } else {
+        reject("error reading uploaded file");
       }
-    } else {
-      return;
-    }
-  };
-  reader.onerror = (event) => {
-    console.log(event.target?.error);
-    return;
-  };
-  reader.readAsText(file);
+    };
+    reader.onerror = (event) => {
+      reject(event.target?.error);
+    };
+    reader.readAsText(file);
+  });
 }
 
 function csvToArray(csvString: string) {
@@ -114,18 +101,35 @@ function csvToArray(csvString: string) {
       return object;
     },
     {});
-    return el;
+    return el as UpdateCSV;
   });
   return arr.filter((value) => {
     return value.name !== "";
   });
 }
 
-function handleUpload(files: File[]) {
+async function handleUpload(files: File[]) {
   processing.value = true;
   uploadedCSV.value = [];
   for (const file of files) {
-    parseCSV(file);
+    await parseCSV(file).catch((error) => {
+      console.log(error);
+    });
+  }
+  for (const csv of uploadedCSV.value) {
+    updateMutation
+      .executeMutation({
+        verificationCode: csv.verification_code,
+        license: csv.license,
+        licenseRationale: csv.license_rationale,
+      })
+      .then(() => {
+        processing.value = false;
+        showDialog.value = true;
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   }
 }
 </script>
