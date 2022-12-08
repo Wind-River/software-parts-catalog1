@@ -13,7 +13,7 @@
         id="search-bar"
         label="Query:"
         class="d-block"
-        v-model="searchQuery"
+        v-model="searchQueryInput"
         :rules="[(v) => v.length > 1 || 'Minimum Query Length is 2 Characters']"
         @keyup.enter="search"
         append-inner-icon="mdi-magnify"
@@ -67,6 +67,7 @@ import { Ref, ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useQuery } from "@urql/vue";
 
+const searchQueryInput: Ref<string> = ref("");
 const searchQuery: Ref<string> = ref("");
 const router = useRouter();
 const result = useQuery({
@@ -94,7 +95,8 @@ const fetching = result.fetching;
 const queryError = result.error;
 
 function search() {
-  if (searchQuery.value.length > 1) {
+  if (searchQueryInput.value.length > 1) {
+    searchQuery.value = searchQueryInput.value;
     result.executeQuery();
   } else return;
 }
