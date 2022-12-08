@@ -29,7 +29,7 @@
   </v-table>
   <v-dialog v-model="showDialog" transition="scale-transition">
     <v-card width="50%" class="align-self-center">
-      <h3 class="mx-6 mt-6">{{dialogMessage}}</h3>
+      <h3 class="mx-6 mt-6">{{ dialogMessage }}</h3>
       <v-btn @click="showDialog = false" color="primary" class="ma-6"
         >Done</v-btn
       >
@@ -56,7 +56,9 @@ type UpdateCSV = {
 const uploadedCSV: Ref<UpdateCSV[]> = ref([]);
 const processing: Ref<boolean> = ref(false);
 const showDialog: Ref<boolean> = ref(false);
-const dialogMessage: Ref<string> = ref("Uploaded CSV has completed processing.");
+const dialogMessage: Ref<string> = ref(
+  "Uploaded CSV has completed processing."
+);
 
 const updateMutation = useMutation(`
   mutation($verificationCode: String!, $license: String, $licenseRationale: String){
@@ -88,22 +90,30 @@ function parseCSV(file: File): Promise<UpdateCSV[]> {
   });
 }
 
-function csvToArray(csvString: string) {
-  const headers = csvString.slice(0, csvString.indexOf("\n")).split(",");
+function csvToArray(csvString: string): UpdateCSV[] {
   const rows = csvString.slice(csvString.indexOf("\n") + 1).split("\n");
-  const arr = rows.map(function (row) {
-    const values = row.split(",");
-    const el: { [key: string]: string | number } = headers.reduce(function (
-      object: { [key: string]: string | number },
-      header,
-      index
-    ) {
-      object[header] = values[index];
-      return object;
-    },
-    {});
-    return el as UpdateCSV;
-  });
+  const arr = rows.reduce((arr: UpdateCSV[], row: string) => {
+    const fields = row.split(",");
+    const name = fields[0];
+    const insert_date = fields[1];
+    const checksum = fields[2];
+    const verification_code = fields[3];
+    const license = fields[4];
+    const license_rationale = fields[5];
+    const license_notice = fields[6];
+    const copyright = fields[7];
+    arr.push({
+      name,
+      insert_date,
+      checksum,
+      verification_code,
+      license,
+      license_rationale,
+      license_notice,
+      copyright,
+    });
+    return arr;
+  }, []);
   return arr.filter((value) => {
     return value.name !== "";
   });
@@ -125,11 +135,11 @@ async function handleUpload(files: File[]) {
         licenseRationale: csv.license_rationale,
       })
       .then((result) => {
-        if(result.error){
-          dialogMessage.value = "Error processing uploaded CSV, please check formatting."
-        }
-        else{
-          dialogMessage.value = "Uploaded CSV has completed processing."
+        if (result.error) {
+          dialogMessage.value =
+            "Error processing uploaded CSV, please check formatting.";
+        } else {
+          dialogMessage.value = "Uploaded CSV has completed processing.";
         }
         processing.value = false;
         showDialog.value = true;
