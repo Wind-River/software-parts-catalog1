@@ -29,7 +29,7 @@
   </v-table>
   <v-dialog v-model="showDialog" transition="scale-transition">
     <v-card width="50%" class="align-self-center">
-      <h3 class="mx-6 mt-6">Uploaded CSV has completed processing.</h3>
+      <h3 class="mx-6 mt-6">{{dialogMessage}}</h3>
       <v-btn @click="showDialog = false" color="primary" class="ma-6"
         >Done</v-btn
       >
@@ -56,6 +56,7 @@ type UpdateCSV = {
 const uploadedCSV: Ref<UpdateCSV[]> = ref([]);
 const processing: Ref<boolean> = ref(false);
 const showDialog: Ref<boolean> = ref(false);
+const dialogMessage: Ref<string> = ref("Uploaded CSV has completed processing.");
 
 const updateMutation = useMutation(`
   mutation($verificationCode: String!, $license: String, $licenseRationale: String){
@@ -123,7 +124,13 @@ async function handleUpload(files: File[]) {
         license: csv.license,
         licenseRationale: csv.license_rationale,
       })
-      .then(() => {
+      .then((result) => {
+        if(result.error){
+          dialogMessage.value = "Error processing uploaded CSV, please check formatting."
+        }
+        else{
+          dialogMessage.value = "Uploaded CSV has completed processing."
+        }
         processing.value = false;
         showDialog.value = true;
       })
