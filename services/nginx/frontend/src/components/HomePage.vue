@@ -20,9 +20,9 @@
         @click:append-inner="search"
       ></v-text-field>
       <br />
-      <h3 v-if="fetching" class="my-4">Loading</h3>
+      <v-progress-linear v-if="fetching" indeterminate striped color="primary"></v-progress-linear>
       <h3 v-if="queryError" class="my-4">{{ queryError }}</h3>
-      <h3 v-if="data && data.find_archive.length === 0">No results found</h3>
+      <h3 v-if="data && data.find_archive.length === 0" class="my-4">No results found</h3>
     </div>
   </v-row>
   <v-row v-if="data && data.find_archive.length > 0" class="justify-center">

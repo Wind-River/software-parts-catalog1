@@ -11,7 +11,7 @@
       </template>
       <p>{{ error }}</p>
     </component>
-    <h3 v-if="fcFetching">Loading</h3>
+    <v-progress-circular indeterminate size="50" color="primary" v-if="fcFetching"></v-progress-circular>
     <h3 v-if="fcError">{{ fcError }}</h3>
     <h2 v-if="fcData" class="mb-6">{{ fcData.archives[0].name }}</h2>
     <v-table v-if="fcData">
