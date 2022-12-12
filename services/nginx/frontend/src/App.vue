@@ -5,7 +5,7 @@ const items = [
   { text: "Add", link: "/file" },
   { text: "Update", link: "/update" },
   { text: "About", link: "/about" },
-];
+]
 </script>
 <template>
   <v-app>

@@ -21,22 +21,27 @@
       <v-btn width="150" color="primary" @click="emit('sendFiles', files)">
         Upload
       </v-btn>
-      <v-progress-circular indeterminate color="primary" class="mx-4" v-if="processing"></v-progress-circular>
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        class="mx-4"
+        v-if="processing"
+      ></v-progress-circular>
     </v-row>
   </v-col>
 </template>
 
 <script setup lang="ts">
-import { Ref, ref } from "vue";
+import { Ref, ref } from "vue"
 
-const files: Ref<File[]> = ref([]);
+const files: Ref<File[]> = ref([])
 const props = defineProps<{
-  message: string;
-  type: string;
-  processing: boolean;
-}>();
+  message: string
+  type: string
+  processing: boolean
+}>()
 
 const emit = defineEmits<{
-  (event: "sendFiles", files: File[]): void;
-}>();
+  (event: "sendFiles", files: File[]): void
+}>()
 </script>

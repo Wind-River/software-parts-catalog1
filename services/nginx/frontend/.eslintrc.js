@@ -26,6 +26,7 @@ module.exports = {
 			"error",
 			"never"
 		],
+		"comma-dangle": ["error", "always-multiline"],
 		"vue/no-v-for-template-key": "off",
 		"vue/no-multiple-template-root": "off",
 		"no-unused-vars": "off"

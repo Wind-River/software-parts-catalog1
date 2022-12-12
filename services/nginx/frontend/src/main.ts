@@ -1,10 +1,10 @@
-import { createApp } from 'vue'
-import App from './App.vue'
-import router from './router'
-import vuetify from './plugins/vuetify'
+import { createApp } from "vue"
+import App from "./App.vue"
+import router from "./router"
+import vuetify from "./plugins/vuetify"
 import urql from "@urql/vue"
-import { loadFonts } from './plugins/webfontloader'
-import { multipartFetchExchange } from '@urql/exchange-multipart-fetch'
+import { loadFonts } from "./plugins/webfontloader"
+import { multipartFetchExchange } from "@urql/exchange-multipart-fetch"
 
 loadFonts()
 
@@ -13,6 +13,6 @@ createApp(App)
   .use(vuetify)
   .use(urql, {
     url: "/api/graphql",
-    exchanges: [multipartFetchExchange]
+    exchanges: [multipartFetchExchange],
   })
-  .mount('#app')
+  .mount("#app")

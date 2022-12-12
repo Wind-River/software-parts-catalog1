@@ -11,32 +11,32 @@
 </template>
 
 <script setup lang="ts">
-import { Ref, ref, computed } from "vue";
+import { Ref, ref, computed } from "vue"
 
 const props = defineProps<{
-  text: String,
-}>();
+  text: String
+}>()
 
 const test: Ref<string> = ref(
-  "A,B,C,D\n2,22,222,2222\n3,33,333,3333\n4,44,444,4444\n5,55,555,5555\n"
-);
+  "A,B,C,D\n2,22,222,2222\n3,33,333,3333\n4,44,444,4444\n5,55,555,5555\n",
+)
 
 const rows = computed(function getRows(): string[][] {
   return props.text.split("\n").reduce((array: string[][], element: string) => {
     if (element !== "") {
-      array.push(element.split(","));
+      array.push(element.split(","))
     }
-    return array;
-  }, []);
-});
+    return array
+  }, [])
+})
 
 const header = computed(function getHeader(): string[] {
-  return rows.value[0];
-});
+  return rows.value[0]
+})
 
 const body = computed(function getBody(): string[][] {
-  return rows.value.slice(1);
-});
+  return rows.value.slice(1)
+})
 </script>
 
 <style scoped>

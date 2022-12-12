@@ -20,9 +20,16 @@
         @click:append-inner="search"
       ></v-text-field>
       <br />
-      <v-progress-linear v-if="fetching" indeterminate striped color="primary"></v-progress-linear>
+      <v-progress-linear
+        v-if="fetching"
+        indeterminate
+        striped
+        color="primary"
+      ></v-progress-linear>
       <h3 v-if="queryError" class="my-4">{{ queryError }}</h3>
-      <h3 v-if="data && data.find_archive.length === 0" class="my-4">No results found</h3>
+      <h3 v-if="data && data.find_archive.length === 0" class="my-4">
+        No results found
+      </h3>
     </div>
   </v-row>
   <v-row v-if="data && data.find_archive.length > 0" class="justify-center">
@@ -63,13 +70,13 @@
 </template>
 
 <script setup lang="ts">
-import { Ref, ref, computed } from "vue";
-import { useRouter } from "vue-router";
-import { useQuery } from "@urql/vue";
+import { Ref, ref, computed } from "vue"
+import { useRouter } from "vue-router"
+import { useQuery } from "@urql/vue"
 
-const searchQueryInput: Ref<string> = ref("");
-const searchQuery: Ref<string> = ref("");
-const router = useRouter();
+const searchQueryInput: Ref<string> = ref("")
+const searchQuery: Ref<string> = ref("")
+const router = useRouter()
 const result = useQuery({
   query: `
   query($searchQuery: String!){
@@ -89,22 +96,22 @@ const result = useQuery({
 `,
   variables: { searchQuery },
   pause: true,
-});
-const data = result.data;
-const fetching = result.fetching;
-const queryError = result.error;
+})
+const data = result.data
+const fetching = result.fetching
+const queryError = result.error
 
 function search() {
   if (searchQueryInput.value.length > 1) {
-    searchQuery.value = searchQueryInput.value;
-    result.executeQuery();
-  } else return;
+    searchQuery.value = searchQueryInput.value
+    result.executeQuery()
+  } else return
 }
 
 function redirect(id: number): void {
   router.push({
     name: "Package Detail",
     params: { id: id },
-  });
+  })
 }
 </script>

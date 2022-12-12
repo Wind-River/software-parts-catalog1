@@ -11,7 +11,12 @@
       </template>
       <p>{{ error }}</p>
     </component>
-    <v-progress-circular indeterminate size="50" color="primary" v-if="fcFetching"></v-progress-circular>
+    <v-progress-circular
+      indeterminate
+      size="50"
+      color="primary"
+      v-if="fcFetching"
+    ></v-progress-circular>
     <h3 v-if="fcError">{{ fcError }}</h3>
     <h2 v-if="fcData" class="mb-6">{{ fcData.archives[0].name }}</h2>
     <v-table v-if="fcData">
@@ -28,11 +33,21 @@
         </tr>
         <tr>
           <td>Insert Date</td>
-          <td>{{ new Date(fcData.file_collection.insert_date).toLocaleDateString() }}</td>
+          <td>
+            {{
+              new Date(fcData.file_collection.insert_date).toLocaleDateString()
+            }}
+          </td>
         </tr>
         <tr>
           <td>License</td>
-          <td>{{ fcData.file_collection.license? fcData.file_collection.license.name : fcData.file_collection.license }}</td>
+          <td>
+            {{
+              fcData.file_collection.license
+                ? fcData.file_collection.license.name
+                : fcData.file_collection.license
+            }}
+          </td>
         </tr>
         <tr>
           <td>Rationale</td>
@@ -84,23 +99,23 @@
 </template>
 
 <script setup lang="ts">
-import { Ref, ref, computed, onBeforeMount } from "vue";
-import Modal from "@/components/Modal.vue";
+import { Ref, ref, computed, onBeforeMount } from "vue"
+import Modal from "@/components/Modal.vue"
 
-import download from "downloadjs";
-import { useRoute } from "vue-router";
-import { useQuery } from "@urql/vue";
+import download from "downloadjs"
+import { useRoute } from "vue-router"
+import { useQuery } from "@urql/vue"
 
 type ModalPayload = {
-  data: string;
-  filename: string;
-  mime: string;
-};
-const cid: Ref<number> = ref(0);
-const loaded: Ref<boolean> = ref(false);
-const data: Ref<any> = ref({});
-const showModal: Ref<boolean> = ref(false);
-const modalPayload: Ref<ModalPayload | null> = ref(null);
+  data: string
+  filename: string
+  mime: string
+}
+const cid: Ref<number> = ref(0)
+const loaded: Ref<boolean> = ref(false)
+const data: Ref<any> = ref({})
+const showModal: Ref<boolean> = ref(false)
+const modalPayload: Ref<ModalPayload | null> = ref(null)
 
 const fileCollectionQuery = useQuery({
   query: `
@@ -135,57 +150,57 @@ const fileCollectionQuery = useQuery({
 }
 `,
   variables: { cid },
-});
-const fcData = fileCollectionQuery.data;
-const fcError = fileCollectionQuery.error;
-const fcFetching = fileCollectionQuery.fetching;
+})
+const fcData = fileCollectionQuery.data
+const fcError = fileCollectionQuery.error
+const fcFetching = fileCollectionQuery.fetching
 
-const error: Ref<string> = ref("Uninitialized Error");
-const route = useRoute();
+const error: Ref<string> = ref("Uninitialized Error")
+const route = useRoute()
 
 function downloadArchive(id: number, name: string, depth = 0) {
   // var ok = true
-  var ctype = "";
+  var ctype = ""
   fetch(
     new Request(`/api/container/download/${id}`, {
       method: "GET",
       mode: "same-origin",
-    })
+    }),
   )
     .then((response) => {
-      ctype = response.headers.get("Content-Type") || "";
+      ctype = response.headers.get("Content-Type") || ""
       // ok = response.ok
       if (!response.ok) {
-        throw response.statusText;
+        throw response.statusText
       }
 
-      return response.blob();
+      return response.blob()
     })
     .catch((err) => {
       if (depth < 3) {
-        downloadArchive(id, name, depth + 1);
+        downloadArchive(id, name, depth + 1)
       } else {
-        error.value = "Unable to retrieve download from server";
-        showModal.value = true;
+        error.value = "Unable to retrieve download from server"
+        showModal.value = true
       }
     })
     .then((blob) => {
       if (blob instanceof Blob) {
-        download(blob, name, ctype);
+        download(blob, name, ctype)
       }
-    });
+    })
 }
 
 onBeforeMount(function () {
-  var id: string;
+  var id: string
   if (typeof route.params.id === "string") {
-    id = route.params.id;
+    id = route.params.id
   } else {
-    id = route.params.id[0];
+    id = route.params.id[0]
   }
 
-  cid.value = parseInt(id);
-});
+  cid.value = parseInt(id)
+})
 </script>
 
 <style></style>

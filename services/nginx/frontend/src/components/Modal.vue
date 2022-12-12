@@ -33,25 +33,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ComputedRef } from "vue";
-import downloadjs from "downloadjs";
+import { computed, ComputedRef } from "vue"
+import downloadjs from "downloadjs"
 
 interface Payload {
-  data: any;
-  filename: string;
-  mime: string;
+  data: any
+  filename: string
+  mime: string
 }
 
 const props = defineProps<{
-  payload: Payload;
-}>();
+  payload: Payload
+}>()
 
 const payload: ComputedRef<Payload> = computed(function () {
-  return props.payload;
-});
+  return props.payload
+})
 
 function download() {
-  downloadjs(payload.value.data, payload.value.filename, payload.value.mime);
+  downloadjs(payload.value.data, payload.value.filename, payload.value.mime)
 }
 </script>
 

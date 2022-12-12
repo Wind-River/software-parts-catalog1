@@ -31,8 +31,8 @@
   </div>
 </template>
 <script setup lang="ts">
-const catalogName: string = "https://software-parts.org";
-const serverVersion: number = 1.0;
-const uiVersion: number = 1.0;
-const totalParts: number = 0;
+const catalogName: string = "https://software-parts.org"
+const serverVersion: number = 1.0
+const uiVersion: number = 1.0
+const totalParts: number = 0
 </script>

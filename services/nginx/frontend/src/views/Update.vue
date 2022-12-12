@@ -38,27 +38,25 @@
 </template>
 
 <script setup lang="ts">
-import { useMutation } from "@urql/vue";
-import { Ref, ref } from "vue";
-import Upload from "@/components/Upload.vue";
+import { useMutation } from "@urql/vue"
+import { Ref, ref } from "vue"
+import Upload from "@/components/Upload.vue"
 
 type UpdateCSV = {
-  checksum: string;
-  copyright: string;
-  insert_date: string;
-  license: string;
-  license_notice: string;
-  license_rationale: string;
-  name: string;
-  verification_code: string;
-};
+  checksum: string
+  copyright: string
+  insert_date: string
+  license: string
+  license_notice: string
+  license_rationale: string
+  name: string
+  verification_code: string
+}
 
-const uploadedCSV: Ref<UpdateCSV[]> = ref([]);
-const processing: Ref<boolean> = ref(false);
-const showDialog: Ref<boolean> = ref(false);
-const dialogMessage: Ref<string> = ref(
-  "Uploaded CSV has completed processing."
-);
+const uploadedCSV: Ref<UpdateCSV[]> = ref([])
+const processing: Ref<boolean> = ref(false)
+const showDialog: Ref<boolean> = ref(false)
+const dialogMessage: Ref<string> = ref("Uploaded CSV has completed processing.")
 
 const updateMutation = useMutation(`
   mutation($verificationCode: String!, $license: String, $licenseRationale: String){
@@ -69,39 +67,39 @@ const updateMutation = useMutation(`
       license_rationale
     }
   }
-`);
+`)
 
 function parseCSV(file: File): Promise<UpdateCSV[]> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+    const reader = new FileReader()
     reader.onload = (event) => {
       if (typeof event.target?.result === "string") {
-        const resultString: string = event.target!.result;
-        uploadedCSV.value.push(...csvToArray(resultString));
-        resolve(uploadedCSV.value);
+        const resultString: string = event.target!.result
+        uploadedCSV.value.push(...csvToArray(resultString))
+        resolve(uploadedCSV.value)
       } else {
-        reject("error reading uploaded file");
+        reject("error reading uploaded file")
       }
-    };
+    }
     reader.onerror = (event) => {
-      reject(event.target?.error);
-    };
-    reader.readAsText(file);
-  });
+      reject(event.target?.error)
+    }
+    reader.readAsText(file)
+  })
 }
 
 function csvToArray(csvString: string): UpdateCSV[] {
-  const rows = csvString.slice(csvString.indexOf("\n") + 1).split("\n");
+  const rows = csvString.slice(csvString.indexOf("\n") + 1).split("\n")
   const arr = rows.reduce((arr: UpdateCSV[], row: string) => {
-    const fields = row.split(",");
-    const name = fields[0];
-    const insert_date = fields[1];
-    const checksum = fields[2];
-    const verification_code = fields[3];
-    const license = fields[4];
-    const license_rationale = fields[5];
-    const license_notice = fields[6];
-    const copyright = fields[7];
+    const fields = row.split(",")
+    const name = fields[0]
+    const insert_date = fields[1]
+    const checksum = fields[2]
+    const verification_code = fields[3]
+    const license = fields[4]
+    const license_rationale = fields[5]
+    const license_notice = fields[6]
+    const copyright = fields[7]
     arr.push({
       name,
       insert_date,
@@ -111,21 +109,21 @@ function csvToArray(csvString: string): UpdateCSV[] {
       license_rationale,
       license_notice,
       copyright,
-    });
-    return arr;
-  }, []);
+    })
+    return arr
+  }, [])
   return arr.filter((value) => {
-    return value.name !== "";
-  });
+    return value.name !== ""
+  })
 }
 
 async function handleUpload(files: File[]) {
-  processing.value = true;
-  uploadedCSV.value = [];
+  processing.value = true
+  uploadedCSV.value = []
   for (const file of files) {
     await parseCSV(file).catch((error) => {
-      console.log(error);
-    });
+      console.log(error)
+    })
   }
   for (const csv of uploadedCSV.value) {
     updateMutation
@@ -137,16 +135,16 @@ async function handleUpload(files: File[]) {
       .then((result) => {
         if (result.error) {
           dialogMessage.value =
-            "Error processing uploaded CSV, please check formatting.";
+            "Error processing uploaded CSV, please check formatting."
         } else {
-          dialogMessage.value = "Uploaded CSV has completed processing.";
+          dialogMessage.value = "Uploaded CSV has completed processing."
         }
-        processing.value = false;
-        showDialog.value = true;
+        processing.value = false
+        showDialog.value = true
       })
       .catch((error) => {
-        console.log(error);
-      });
+        console.log(error)
+      })
   }
 }
 </script>

@@ -32,33 +32,33 @@
 </template>
 
 <script setup lang="ts">
-import { useMutation } from "@urql/vue";
-import { Ref, ref } from "vue";
-import download from "downloadjs";
-import Upload from "@/components/Upload.vue";
+import { useMutation } from "@urql/vue"
+import { Ref, ref } from "vue"
+import download from "downloadjs"
+import Upload from "@/components/Upload.vue"
 
 type Archive = {
-  id: number;
-  name: string;
-  insert_date: string;
-  sha256: string;
-  sha1: string;
-  extract_status: string;
-  file_collection_id: string;
-  file_collection: FileCollection;
-};
+  id: number
+  name: string
+  insert_date: string
+  sha256: string
+  sha1: string
+  extract_status: string
+  file_collection_id: string
+  file_collection: FileCollection
+}
 type FileCollection = {
-  verification_code_one: string;
-  verification_code_two: string;
-  license_expression: string;
-  license_rationale: string;
-  license_notice: string;
-  copyright: string;
-};
+  verification_code_one: string
+  verification_code_two: string
+  license_expression: string
+  license_rationale: string
+  license_notice: string
+  copyright: string
+}
 
-const uploadedArchives: Ref<Archive[]> = ref([]);
-const processing: Ref<boolean> = ref(false);
-const showDialog: Ref<boolean> = ref(false);
+const uploadedArchives: Ref<Archive[]> = ref([])
+const processing: Ref<boolean> = ref(false)
+const showDialog: Ref<boolean> = ref(false)
 
 const uploadMutation = useMutation(`
   mutation($file: Upload!){
@@ -82,7 +82,7 @@ const uploadMutation = useMutation(`
       }
     }
   }
-`);
+`)
 
 function convertToCSV(arr: Archive[]) {
   const array = [
@@ -95,7 +95,7 @@ function convertToCSV(arr: Archive[]) {
     "license_notice",
     "copyright",
     "\n",
-  ];
+  ]
 
   const parsedArr = arr
     .map((archive) => {
@@ -110,38 +110,37 @@ function convertToCSV(arr: Archive[]) {
         archive.file_collection.license_rationale,
         archive.file_collection.license_notice,
         archive.file_collection.copyright,
-      ].toString();
+      ].toString()
     })
-    .join("\n");
+    .join("\n")
 
-  return array.toString() + parsedArr;
+  return array.toString() + parsedArr
 }
 
 function downloadCSV() {
-  download(convertToCSV(uploadedArchives.value), "tk-prefilled", "text/csv");
-  showDialog.value = false;
+  download(convertToCSV(uploadedArchives.value), "tk-prefilled", "text/csv")
+  showDialog.value = false
 }
 
 async function handleUpload(files: File[]) {
-  processing.value = true;
-  console.log(files);
-  uploadedArchives.value = [];
+  processing.value = true
+  console.log(files)
+  uploadedArchives.value = []
   for (const file of files) {
     await uploadMutation
       .executeMutation({ file: file })
       .then((value) => {
         if (value.error) {
-          console.log(value.error);
+          console.log(value.error)
         }
-        return value;
+        return value
       })
       .then((value) => {
-        console.log(value.data.uploadArchive.archive);
-        uploadedArchives.value.push(value.data.uploadArchive.archive);
-      });
+        console.log(value.data.uploadArchive.archive)
+        uploadedArchives.value.push(value.data.uploadArchive.archive)
+      })
   }
-  processing.value = false;
-  showDialog.value = true;
+  processing.value = false
+  showDialog.value = true
 }
 </script>
-
