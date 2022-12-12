@@ -65,6 +65,6 @@ secrets:
   blob:
     file: ./secrets/default_secrets/blob.json
   ssl_certificate:
-    file: ./secrets/default_secrets/ssl.crt
+    file: ./secrets/default_secrets/ssl/ssl.crt
   ssl_certificate_key:
-    file: ./secrets/default_secrets/ssl_crt.key
+    file: ./secrets/default_secrets/ssl/ssl_crt.key
