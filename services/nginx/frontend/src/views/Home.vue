@@ -3,7 +3,7 @@
 import HomePage from "@/components/HomePage.vue" // @ is an alias to /src
 </script>
 <template>
-  <div>
+  <v-container>
     <HomePage />
-  </div>
+  </v-container>
 </template>

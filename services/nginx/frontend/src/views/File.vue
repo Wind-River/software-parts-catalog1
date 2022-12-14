@@ -1,28 +1,31 @@
 <!-- Package file upload page -->
 <template>
-  <div class="d-flex justify-center">
-    <Upload
-      type="application/*"
-      message="Click to select files"
-      :processing="processing"
-      @sendFiles="handleUpload"
-    />
-  </div>
-  <v-table v-if="uploadedArchives.length > 0" class="ma-12">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Checksum</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr v-for="(archive, index) in uploadedArchives" :key="index">
-        <td>{{ archive.name }}</td>
-        <td>{{ archive.sha256 ? archive.sha256 : archive.sha1 }}</td>
-        <td><v-icon icon="mdi-check" color="primary"></v-icon></td>
-      </tr>
-    </tbody>
-  </v-table>
+  <v-container>
+    <v-card class="d-flex flex-column pa-8 mt-12 bg-secondary">
+      <h2 class="px-8">Upload Parts</h2>
+      <Upload
+        type="application/*"
+        message="Click to select files"
+        :processing="processing"
+        @sendFiles="handleUpload"
+      />
+    </v-card>
+    <v-table v-if="uploadedArchives.length > 0" class="ma-12">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Checksum</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(archive, index) in uploadedArchives" :key="index">
+          <td>{{ archive.name }}</td>
+          <td>{{ archive.sha256 ? archive.sha256 : archive.sha1 }}</td>
+          <td><v-icon icon="mdi-check" color="primary"></v-icon></td>
+        </tr>
+      </tbody>
+    </v-table>
+  </v-container>
   <v-dialog v-model="showDialog" transition="scale-transition">
     <v-card width="50%" class="align-self-center">
       <v-btn @click="downloadCSV" color="primary">Download CSV</v-btn>

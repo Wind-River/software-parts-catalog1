@@ -1,7 +1,7 @@
 <!-- About Page -->
 <template>
-  <div class="d-flex justify-center">
-    <div class="w-75">
+  <div class="d-flex flex-column align-center fill-height">
+    <v-container>
       <v-img src="catalog-logo2.png" height="200" class="mt-12" />
       <h4 class="my-6 px-6">
         Maintaining a catalog of software components (parts) is a requirement
@@ -11,22 +11,12 @@
         companies to seamlessly manage 1000s, 10,000s if not 100,000s of
         software parts from which their products are comprised.
       </h4>
-      <div class="d-flex justify-center">
-        <v-card width="50%">
-          <v-card-title class="bg-primary text-center px-8">
-            Catalog Name: {{ catalogName }}
-          </v-card-title>
-          <v-card-text class="mt-4">
-            Total Parts Stored: {{ totalParts }}
-          </v-card-text>
-          <v-divider></v-divider>
-          <v-card-text>UI Version: {{ uiVersion.toPrecision(3) }}</v-card-text>
-          <v-divider></v-divider>
-          <v-card-text>
-            Server Version: {{ serverVersion.toPrecision(3) }}
-          </v-card-text>
-        </v-card>
-      </div>
+    </v-container>
+    <div class="d-flex w-100 mt-auto pr-8 bg-secondary justify-end">
+      <h4 class="mx-2 text-grey-darken-1">Catalog Name: {{ catalogName }}</h4>
+      <h4 class="mx-2 text-grey-darken-1">Total Parts Stored: {{ totalParts }}</h4>
+      <h4 class="mx-2 text-grey-darken-1">UI Version: {{ uiVersion.toPrecision(3) }}</h4>
+      <h4 class="mx-2 text-grey-darken-1">Server Version: {{ serverVersion.toPrecision(3) }}</h4>
     </div>
   </div>
 </template>
