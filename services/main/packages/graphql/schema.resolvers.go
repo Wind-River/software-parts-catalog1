@@ -88,8 +88,11 @@ func (r *mutationResolver) UploadArchive(ctx context.Context, file graphql.Uploa
 		log.Error().Str(zerolog.CallerFieldName, "mutationResolver.UploadArchive").Err(err).Msg("error creating temp file")
 		return ret, err
 	}
+	tmpHandOff := false
 	defer func(filePath string) {
-		os.Remove(filePath)
+		if !tmpHandOff {
+			os.Remove(filePath)
+		}
 	}(tmpFile.Name())
 
 	var fileName string
@@ -127,7 +130,10 @@ func (r *mutationResolver) UploadArchive(ctx context.Context, file graphql.Uploa
 
 	log.Debug().Str(zerolog.CallerFieldName, "mutationResolver.UploadArchive").
 		Interface("arch", arch).Msg("processing archive in background")
+	tmpHandOff = true
 	go func(arch *archive.Archive, archiveController *archive.ArchiveController) error {
+		defer os.Remove(arch.Path.String)
+
 		if err := archiveController.Process(arch); err != nil {
 			log.Error().Str(zerolog.CallerFieldName, "mutationResolver.UploadArchive").Err(err).Msg("error processing archive")
 			return err
