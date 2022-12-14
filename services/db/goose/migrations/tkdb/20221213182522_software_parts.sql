@@ -7,6 +7,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "ltree";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Domain Types for Hashes
+CREATE DOMAIN sha256_bytea AS BYTEA CHECK (OCTET_LENGTH(VALUE) = 32);
+CREATE DOMAIN sha1_bytea AS BYTEA CHECK (OCTET_LENGTH(VALUE) = 20);
+CREATE DOMAIN md5_bytea AS BYTEA CHECK (OCTET_LENGTH(VALUE) = 16);
+
 -- Part
 CREATE TABLE IF NOT EXISTS part (
     part_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -26,8 +31,8 @@ CREATE TABLE IF NOT EXISTS part (
 CREATE OR REPLACE FUNCTION calculate_part_verification_code_v2(_pid UUID) RETURNS BYTEA LANGUAGE plpgsql AS $$
     DECLARE
         _row RECORD;
-        _shas BYTEA[] := ARRAY[]::BYTEA[];
-        _data BYTEA := '';
+        _shas BYTEA[] := ARRAY[]::SHA256_BYTEA[];
+        _data SHA256_BYTEA := '';
         _vcode BYTEA;
     BEGIN
         FOR _row IN SELECT f.sha256 FROM file f
@@ -120,21 +125,21 @@ CREATE TABLE IF NOT EXISTS part_documents (
 -- Files
 
 CREATE TABLE IF NOT EXISTS file (
-    sha256 BYTEA PRIMARY KEY,
+    sha256 SHA256_BYTEA PRIMARY KEY,
     file_size BIGINT NOT NULL DEFAULT 0,
-    md5 BYTEA UNIQUE,
-    sha1 BYTEA UNIQUE
+    md5 MD5_BYTEA,
+    sha1 SHA1_BYTEA
 );
 
 CREATE TABLE IF NOT EXISTS file_alias (
-    file_sha256 BYTEA REFERENCES file(sha256),
+    file_sha256 SHA256_BYTEA REFERENCES file(sha256),
     name TEXT NOT NULL,
     PRIMARY KEY(file_sha256, name)
 );
 
 CREATE TABLE IF NOT EXISTS part_has_file (
     part_id UUID REFERENCES part(part_id),
-    file_sha256 BYTEA REFERENCES file(sha256),
+    file_sha256 SHA256_BYTEA REFERENCES file(sha256),
     PRIMARY KEY(part_id, file_sha256)
 );
 
@@ -143,14 +148,14 @@ CREATE TABLE IF NOT EXISTS archive (
     sha256 BYTEA PRIMARY KEY,
     archive_size BIGINT NOT NULL DEFAULT 0,
     part_id UUID REFERENCES part(part_id),
-    md5 BYTEA UNIQUE,
-    sha1 BYTEA UNIQUE,
+    md5 MD5_BYTEA,
+    sha1 SHA1_BYTEA,
     insert_date TIMESTAMP NOT NULL DEFAULT NOW(),
     storage_path TEXT
 );
 
 CREATE TABLE IF NOT EXISTS archive_alias (
-    archive_sha256 BYTEA REFERENCES archive(sha256),
+    archive_sha256 SHA256_BYTEA REFERENCES archive(sha256),
     name TEXT NOT NULL,
     PRIMARY KEY(archive_sha256, name)
 );
