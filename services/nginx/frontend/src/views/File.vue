@@ -102,6 +102,7 @@ function convertToCSV(arr: Archive[]) {
 
   const parsedArr = arr
     .map((archive) => {
+      if(archive.file_collection !== null){
       return [
         archive.name,
         archive.insert_date,
@@ -114,6 +115,12 @@ function convertToCSV(arr: Archive[]) {
         archive.file_collection.license_notice,
         archive.file_collection.copyright,
       ].toString()
+      }
+      else return [
+        archive.name,
+        archive.insert_date,
+        archive.sha256? archive.sha256 : archive.sha1,
+      ]
     })
     .join("\n")
 
@@ -129,19 +136,25 @@ async function handleUpload(files: File[]) {
   processing.value = true
   console.log(files)
   uploadedArchives.value = []
+  let retry = false;
   for (const file of files) {
     await uploadMutation
       .executeMutation({ file: file })
       .then((value) => {
         if (value.error) {
           console.log(value.error)
+          retry = true;
         }
         return value
       })
       .then((value) => {
-        console.log(value.data.uploadArchive.archive)
+        if(value.data.uploadArchive.archive){
         uploadedArchives.value.push(value.data.uploadArchive.archive)
+        }
       })
+  }
+  if(retry){
+    handleUpload(files)
   }
   processing.value = false
   showDialog.value = true
