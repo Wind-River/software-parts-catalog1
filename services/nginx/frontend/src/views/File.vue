@@ -102,25 +102,25 @@ function convertToCSV(arr: Archive[]) {
 
   const parsedArr = arr
     .map((archive) => {
-      if(archive.file_collection !== null){
-      return [
-        archive.name,
-        archive.insert_date,
-        archive.sha256 ? archive.sha256 : archive.sha1,
-        archive.file_collection.verification_code_two
-          ? archive.file_collection.verification_code_two
-          : archive.file_collection.verification_code_one,
-        archive.file_collection.license_expression,
-        archive.file_collection.license_rationale,
-        archive.file_collection.license_notice,
-        archive.file_collection.copyright,
-      ].toString()
-      }
-      else return [
-        archive.name,
-        archive.insert_date,
-        archive.sha256? archive.sha256 : archive.sha1,
-      ]
+      if (archive.file_collection !== null) {
+        return [
+          archive.name,
+          archive.insert_date,
+          archive.sha256 ? archive.sha256 : archive.sha1,
+          archive.file_collection.verification_code_two
+            ? archive.file_collection.verification_code_two
+            : archive.file_collection.verification_code_one,
+          archive.file_collection.license_expression,
+          archive.file_collection.license_rationale,
+          archive.file_collection.license_notice,
+          archive.file_collection.copyright,
+        ].toString()
+      } else
+        return [
+          archive.name,
+          archive.insert_date,
+          archive.sha256 ? archive.sha256 : archive.sha1,
+        ]
     })
     .join("\n")
 
@@ -136,27 +136,28 @@ async function handleUpload(files: File[]) {
   processing.value = true
   console.log(files)
   uploadedArchives.value = []
-  let retry = false;
+  let retry = false
   for (const file of files) {
     await uploadMutation
       .executeMutation({ file: file })
       .then((value) => {
         if (value.error) {
           console.log(value.error)
-          retry = true;
+          retry = true
         }
         return value
       })
       .then((value) => {
-        if(value.data.uploadArchive.archive){
-        uploadedArchives.value.push(value.data.uploadArchive.archive)
+        if (value.data.uploadArchive.archive) {
+          uploadedArchives.value.push(value.data.uploadArchive.archive)
         }
       })
   }
-  if(retry){
+  if (retry) {
     handleUpload(files)
+  } else {
+    processing.value = false
+    showDialog.value = true
   }
-  processing.value = false
-  showDialog.value = true
 }
 </script>
