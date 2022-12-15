@@ -1,12 +1,13 @@
 <template>
   <v-col class="d-flex flex-column align-center">
-    <v-row class="w-75 ma-6">
+    <v-row class="w-100 ma-6">
       <v-file-input
         :label="message"
         :accept="type"
         multiple
         v-model="files"
         variant="outlined"
+        bg-color="white"
       >
         <template v-slot:selection="{ fileNames }">
           <template v-for="fileName in fileNames" :key="fileName">
