@@ -128,26 +128,35 @@ async function handleUpload(files: File[]) {
       console.log(error)
     })
   }
+  console.log(uploadedCSV.value)
   for (const csv of uploadedCSV.value) {
-    updateMutation
-      .executeMutation({
-        verificationCode: csv.verification_code,
-        license: csv.license,
-        licenseRationale: csv.license_rationale,
-      })
-      .then((result) => {
-        if (result.error) {
-          dialogMessage.value =
-            "Error processing uploaded CSV, please check formatting."
-        } else {
-          dialogMessage.value = "Uploaded CSV has completed processing."
-        }
-        processing.value = false
-        showDialog.value = true
-      })
-      .catch((error) => {
-        console.log(error)
-      })
+    if (csv.verification_code === undefined || "") {
+      dialogMessage.value = "Verification code required to update parts."
+    } else {
+      updateMutation
+        .executeMutation({
+          verificationCode: csv.verification_code,
+          license: csv.license,
+          licenseRationale: csv.license_rationale,
+        })
+        .then((result) => {
+          if (
+            result.error?.message === "[GraphQL] no data was given to update"
+          ) {
+            dialogMessage.value = "No data was given to update."
+          } else if (result.error) {
+            dialogMessage.value =
+              "Error processing uploaded CSV, please check formatting."
+          } else {
+            dialogMessage.value = "Uploaded CSV has completed processing."
+          }
+        })
+        .catch((error) => {
+          console.log(error)
+        })
+    }
+    processing.value = false
+    showDialog.value = true
   }
 }
 </script>
