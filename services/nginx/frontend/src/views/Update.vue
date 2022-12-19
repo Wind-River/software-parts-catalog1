@@ -128,7 +128,6 @@ async function handleUpload(files: File[]) {
       console.log(error)
     })
   }
-  console.log(uploadedCSV.value)
   for (const csv of uploadedCSV.value) {
     if (csv.verification_code === undefined || "") {
       dialogMessage.value = "Verification code required to update parts."
