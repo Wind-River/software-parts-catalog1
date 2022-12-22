@@ -1,5 +1,5 @@
 <template>
-  <div class="ma-6">
+  <v-container>
     <component
       :is="Modal"
       v-if="showModal"
@@ -95,7 +95,7 @@
         </tr>
       </tbody>
     </v-table>
-  </div>
+  </v-container>
 </template>
 
 <script setup lang="ts">

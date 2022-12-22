@@ -1,15 +1,16 @@
 <!-- Component used for home page package search functionality -->
 <template>
   <v-row class="d-flex justify-center">
-    <div class="d-flex flex-column w-50 mt-12">
+    <div class="d-flex flex-column w-75 mt-12">
       <v-img
         src="catalog-logo2.png"
-        height="200"
+        height="150"
         width="auto"
         class="align-self-center"
       />
-      <h2>Part Search</h2>
+      <h4>Part Search</h4>
       <v-text-field
+        density="compact"
         id="search-bar"
         label="Query:"
         class="d-block"
@@ -33,7 +34,7 @@
     </div>
   </v-row>
   <v-row v-if="searchStore.results && searchStore.results.length > 0" class="justify-center">
-    <v-table class="mx-8 w-75">
+    <v-table class="mx-8 w-75" density="compact">
       <thead class="bg-primary">
         <tr>
           <th>{{ searchStore.results.length }}</th>

@@ -1,7 +1,8 @@
 <template>
   <v-col class="d-flex flex-column align-center">
-    <v-row class="w-100 ma-6">
+    <v-row class="w-100 ma-2">
       <v-file-input
+        density="compact"
         :label="message"
         :accept="type"
         multiple
@@ -11,21 +12,23 @@
       >
         <template v-slot:selection="{ fileNames }">
           <template v-for="fileName in fileNames" :key="fileName">
-            <v-chip size="large" label color="primary" class="mr-2">
+            <v-chip size="small" label color="primary" class="mr-1">
               {{ fileName }}
             </v-chip>
           </template>
         </template>
       </v-file-input>
     </v-row>
-    <v-row>
-      <v-btn width="150" color="primary" @click="emit('sendFiles', files)">
+    <v-row class="align-center">
+      <v-btn density="compact" color="primary" @click="emit('sendFiles', files)">
         Upload
       </v-btn>
       <v-progress-circular
         indeterminate
         color="primary"
-        class="mx-4"
+        class="mx-2"
+        :size="20"
+        :width="2"
         v-if="processing"
       ></v-progress-circular>
     </v-row>

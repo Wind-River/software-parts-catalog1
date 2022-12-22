@@ -1,8 +1,8 @@
 <!-- Package file upload page -->
 <template>
   <v-container>
-    <v-card class="d-flex flex-column pa-8 mt-12 bg-secondary">
-      <h2 class="px-8">Upload Parts</h2>
+    <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary">
+      <h3 class="px-8">Upload Parts</h3>
       <Upload
         type="application/*"
         message="Click to select files"
@@ -10,7 +10,7 @@
         @sendFiles="handleUpload"
       />
     </v-card>
-    <v-table v-if="uploadedArchives.length > 0" class="ma-12">
+    <v-table v-if="uploadedArchives.length > 0" class="ma-4">
       <thead>
         <tr>
           <th>Name</th>

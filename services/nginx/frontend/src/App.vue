@@ -9,9 +9,9 @@ const items = [
 </script>
 <template>
   <v-app>
-    <v-app-bar>
+    <v-app-bar density="compact">
       <v-list
-        class="d-flex flex-row w-100 justify-end px-6 bg-blue-grey-darken-3"
+        class="d-flex flex-row w-100 justify-end px-4 bg-blue-grey-darken-3"
       >
         <v-list-item
           v-for="(item, i) in items"
@@ -19,7 +19,7 @@ const items = [
           :value="item"
           :to="item.link"
         >
-          <v-list-item-title v-text="item.text" />
+          <div slot:title class="text-subtitle-2">{{ item.text }}</div>
         </v-list-item>
       </v-list>
     </v-app-bar>
