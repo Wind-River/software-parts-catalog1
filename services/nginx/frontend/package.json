@@ -16,6 +16,7 @@
     "core-js": "^3.6.5",
     "downloadjs": "^1.4.7",
     "graphql": "^16.6.0",
+    "pinia": "^2.0.28",
     "register-service-worker": "^1.7.1",
     "roboto-fontface": "*",
     "string-similarity": "^4.0.4",
