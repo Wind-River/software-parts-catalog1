@@ -19,6 +19,11 @@ type SearchResult = {
     archive: {
         extract_status: number
         file_collection_id: number
+        file_collection: {
+            license: {
+                name: string
+            }
+        }
         id: number
         insert_date: string
         name: string

@@ -34,13 +34,14 @@
     </div>
   </v-row>
   <v-row v-if="searchStore.results && searchStore.results.length > 0" class="justify-center">
-    <v-table class="mx-8 w-75" density="compact">
+    <v-table class="mx-8" density="compact">
       <thead class="bg-primary">
         <tr>
           <th>{{ searchStore.results.length }}</th>
           <th>Name</th>
           <th>Date</th>
           <th>SHA256/SHA1</th>
+          <th>License</th>
           <th>Extraction Status</th>
         </tr>
       </thead>
@@ -63,6 +64,7 @@
                 : "SHA1:" + row.archive.sha1.substring(0, 10) + "..."
             }}
           </td>
+          <td>{{ row.archive.file_collection.license? row.archive.file_collection.license.name : "" }}</td>
           <td>
             {{ row.archive.extract_status === 0 ? "Complete" : "In Progress" }}
           </td>
@@ -95,6 +97,11 @@ const result = useQuery({
       sha1
       extract_status
       file_collection_id
+      file_collection{
+        license{
+          name
+        }
+      }
     }
     distance
     }
