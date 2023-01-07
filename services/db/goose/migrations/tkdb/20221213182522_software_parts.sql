@@ -123,7 +123,6 @@ CREATE TABLE IF NOT EXISTS part_documents (
 );
 
 -- Files
-
 CREATE TABLE IF NOT EXISTS file (
     sha256 SHA256_BYTEA PRIMARY KEY,
     file_size BIGINT NOT NULL DEFAULT 0,
@@ -141,6 +140,22 @@ CREATE TABLE IF NOT EXISTS part_has_file (
     part_id UUID REFERENCES part(part_id),
     file_sha256 SHA256_BYTEA REFERENCES file(sha256),
     PRIMARY KEY(part_id, file_sha256)
+);
+
+-- File Documents
+CREATE TABLE IF NOT EXISTS file_has_document (
+    file_sha256 SHA256_BYTEA REFERENCES file(sha256),
+    key TEXT NOT NULL,
+    PRIMARY KEY(part_id, key),
+    document JSONB NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS file_documents (
+    file_sha256 SHA256_BYTEA REFERENCES file(sha256),
+    key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    PRIMARY KEY(part_id, key, title),
+    document JSONB NOT NULL
 );
 
 -- Archive

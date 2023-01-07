@@ -17,10 +17,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
-	"github.com/jmoiron/sqlx"
 	"gitlab.devstar.cloud/ip-systems/verification-code.git/code"
 	"gitlab.devstar.cloud/ip-systems/verification-code.git/code/legacy"
 )
