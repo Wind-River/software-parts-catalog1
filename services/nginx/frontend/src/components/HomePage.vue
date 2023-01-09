@@ -1,7 +1,7 @@
 <!-- Component used for home page package search functionality -->
 <template>
   <v-row class="d-flex justify-center">
-    <div class="d-flex flex-column w-75 mt-12">
+    <div class="d-flex flex-column w-50 mt-12">
       <v-img
         src="catalog-logo2.png"
         height="150"
@@ -13,7 +13,6 @@
         density="compact"
         id="search-bar"
         label="Query:"
-        class="d-block"
         v-model="searchQueryInput"
         :rules="[(v) => v.length > 1 || 'Minimum Query Length is 2 Characters']"
         @keyup.enter="search"

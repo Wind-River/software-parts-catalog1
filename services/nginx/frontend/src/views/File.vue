@@ -1,7 +1,7 @@
 <!-- Package file upload page -->
 <template>
-  <v-container>
-    <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary">
+  <v-container class="d-flex justify-center">
+    <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-50">
       <h3 class="px-8">Upload Parts</h3>
       <Upload
         type="application/*"
