@@ -1,34 +1,36 @@
 <!-- Package file upload page -->
 <template>
-  <v-container class="d-flex justify-center">
-    <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-50">
-      <h3 class="px-8">Update Part Details</h3>
-      <Upload
-        type="text/csv"
-        message="Click to select CSV"
-        :processing="processing"
-        @sendFiles="handleUpload"
-      />
-    </v-card>
-    <v-table v-if="uploadedCSV.length > 0" class="ma-4">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Verification Code</th>
-          <th>License</th>
-          <th>Rationale</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(csv, index) in uploadedCSV" :key="index">
-          <td>{{ csv.name }}</td>
-          <td>{{ csv.verification_code }}</td>
-          <td>{{ csv.license }}</td>
-          <td>{{ csv.license_rationale }}</td>
-          <td><v-icon icon="mdi-check" color="primary"></v-icon></td>
-        </tr>
-      </tbody>
-    </v-table>
+  <v-container>
+    <div class="d-flex flex-column align-center">
+      <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-50">
+        <h3 class="px-8">Update Part Details</h3>
+        <Upload
+          type="text/csv"
+          message="Click to select CSV"
+          :processing="processing"
+          @sendFiles="handleUpload"
+        />
+      </v-card>
+      <v-table v-if="uploadedCSV.length > 0" class="ma-4">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Verification Code</th>
+            <th>License</th>
+            <th>Rationale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(csv, index) in uploadedCSV" :key="index">
+            <td>{{ csv.name }}</td>
+            <td>{{ csv.verification_code }}</td>
+            <td>{{ csv.license }}</td>
+            <td>{{ csv.license_rationale }}</td>
+            <td><v-icon icon="mdi-check" color="primary"></v-icon></td>
+          </tr>
+        </tbody>
+      </v-table>
+    </div>
   </v-container>
   <v-dialog v-model="showDialog" transition="scale-transition">
     <v-card width="50%" class="align-self-center">
