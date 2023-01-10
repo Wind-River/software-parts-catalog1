@@ -1,4 +1,6 @@
-package migrations
+//go:build tkdb
+
+package tkdb
 
 import (
 	"database/sql"
@@ -6,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
-	"wrs/tk/packages/core/file_collection"
+	"wrs/tkdb/goose/packages/file_collection"
 
 	"strings"
 
-	generic "wrs/tk/packages/generics/graph"
+	generic "wrs/tkdb/goose/packages/generics/graph"
 
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -42,7 +44,7 @@ func upComplexCopy(tx *sql.Tx) error {
 	oldCollections := make([]OldFilecollection, 0)
 	// first pass create parts and assign files
 	rows, err := tx.Query("SELECT id, insert_date, flag_extract, flag_license_extracted, license_id, license_rationale, license_expression, license_notice, copyright, verification_code_one, verification_code_two " +
-		"FROM file_collection WHERE verifiaction_code_two IS NOT NULL")
+		"FROM file_collection WHERE verification_code_two IS NOT NULL")
 	if err != nil {
 		return errors.Wrapf(err, "error selecting file_collections")
 	}
@@ -174,7 +176,7 @@ type OldFilecollection struct {
 	LicenseNotice           string    `db:"license_notice"`
 	Copyright               string    `db:"copyright"`
 	FileVerificationCodeOne []byte    `db:"verification_code_one"`
-	FileVerificationCodeTwo []byte    `db:"verifiaction_code_two"`
+	FileVerificationCodeTwo []byte    `db:"verification_code_two"`
 }
 
 func updateFileCollectionVerificationCodes(conn *sql.Tx) error {

@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS part_has_file (
 CREATE TABLE IF NOT EXISTS file_has_document (
     file_sha256 SHA256_BYTEA REFERENCES file(sha256),
     key TEXT NOT NULL,
-    PRIMARY KEY(part_id, key),
+    PRIMARY KEY(file_sha256, key),
     document JSONB NOT NULL
 );
 
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS file_documents (
     file_sha256 SHA256_BYTEA REFERENCES file(sha256),
     key TEXT NOT NULL,
     title TEXT NOT NULL,
-    PRIMARY KEY(part_id, key, title),
+    PRIMARY KEY(file_sha256, key, title),
     document JSONB NOT NULL
 );
 

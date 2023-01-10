@@ -7,7 +7,7 @@ SELECT 'up SQL query';
 -- +goose StatementBegin
 DO LANGUAGE plpgsql $$
 DECLARE
-    _file file_table$ROWTYPE;
+    _file file_table%ROWTYPE;
 BEGIN
     FOR _file IN SELECT * FROM file_table WHERE _file.checksum_sha256 IS NOT NULL ORDER BY id
     LOOP
@@ -21,17 +21,12 @@ $$;
 -- +goose StatementBegin
 DO LANGUAGE plpgsql $$
 DECLARE
-    _file_alias file_alias_table$ROWTYPE;
+    _record RECORD;
     _sha1 BYTEA;
 BEGIN
-    FOR _file IN SELECT * FROM file_alias_table WHERE _file.checksum_sha256 IS NOT NULL ORDER BY id
-    LOOP
-        SELECT _file.checksum_sha1 
-        FROM file_table 
-        WHERE file_table.id=_file_alias.id 
-        INTO _sha1;
-        
-        INSERT INTO file_alias (file_sha256, name) VALUES (_file.checksum_sha256, _file.size, _file.checksum_md5, _file.checksum_sha1);
+    FOR _record IN SELECT file_alias_table.name, file_table.checksum_sha256 FROM file_alias_table INNER JOIN file_table ON file_table.id=file_alias_table.file_id WHERE file_table.checksum_sha256 IS NOT NULL ORDER BY file_alias_table.id
+    LOOP        
+        INSERT INTO file_alias (file_sha256, name) VALUES (_record.checksum_sha256, _record.name);
     END LOOP;
 END;
 $$;
@@ -41,7 +36,7 @@ $$;
 -- +goose StatementBegin
 DO LANGUAGE plpgsql $$
 DECLARE
-    _archive archive_table$ROWTYPE;
+    _archive archive_table%ROWTYPE;
 BEGIN
     FOR _archive IN SELECT * FROM archive_table WHERE _archive.checksum_sha256 IS NOT NULL ORDER BY id
     LOOP
