@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"time"
 
 	"wrs/tkdb/goose/packages/file_collection"
@@ -146,7 +147,7 @@ func upComplexCopy(tx *sql.Tx) error {
 			return errors.Wrapf(err, "error decoding sha256 %s", checksumSha256)
 		}
 
-		if _, err := tx.Exec("UPDATE archive SET part_id=$1 WHERE sha256=$2",
+		if _, err := tx.Exec("UPDATE archive_table SET part_id=$1 WHERE sha256=$2",
 			partID, sha256); err != nil {
 			return errors.Wrapf(err, "error setting part_id of archive %s to %s",
 				checksumSha256, partID)
@@ -203,21 +204,11 @@ const (
 	FVC2Key = "file_collection_verification_code_two_key"
 )
 
-func determineNewestFileCollection(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController, conflict error, fileCollectionID int64, fvcOne []byte, fvcTwo []byte) (new *file_collection.FileCollection, old *file_collection.FileCollection, err error) {
+func determineNewestFileCollection(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController, fileCollectionID int64, fvcOne []byte, fvcTwo []byte, conflictingFileCollectionID int64) (new *file_collection.FileCollection, old *file_collection.FileCollection, err error) {
 	// logger := log.With().Str(zerolog.CallerFieldName, "determineNewestFileCollection").Logger()
-	var other *file_collection.FileCollection
-	if strings.Contains(conflict.Error(), FVC1Key) {
-		other, err = fileCollectionController.GetByVerificationCode(fvcOne)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else if strings.Contains(conflict.Error(), FVC2Key) {
-		other, err = fileCollectionController.GetByVerificationCode(fvcTwo)
-		if err != nil {
-			return nil, nil, err
-		}
-	} else {
-		return nil, nil, conflict
+	other, err := fileCollectionController.GetByID(conflictingFileCollectionID)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	fileCollection, err := fileCollectionController.GetByID(fileCollectionID)
@@ -279,6 +270,10 @@ func determineNewestFileCollection(conn *sql.Tx, fileCollectionController *Trans
 			// replace March with Mar
 			rationaleDateString = strings.Replace(rationaleDateString, "March", "Mar", 1)
 			otherDateString = strings.Replace(otherDateString, "March", "Mar", 1)
+			// fix truncated year; no guarantee this is the right year, just making a guess
+			truncatedYearPattern := regexp.MustCompile(`\-202$`)
+			rationaleDateString = truncatedYearPattern.ReplaceAllLiteralString(rationaleDateString, "-2020")
+			otherDateString = truncatedYearPattern.ReplaceAllLiteralString(otherDateString, "-2020")
 
 			var rationaleDate, otherDate time.Time
 			if d, err := parseDateTime(rationaleDateString); err != nil {
@@ -331,7 +326,7 @@ func updateCollectionsWithOneButNotTwo(conn *sql.Tx, fileCollectionController *T
 	FROM file_collection 
 	WHERE verification_code_two IS NULL 
 	AND verification_code_one IS NOT NULL 
-	ORDER BY RANDOM()`)
+	ORDER BY id`)
 	if err != nil {
 		return errors.Wrapf(err, "error selecting file_collections to work on")
 	}
@@ -350,24 +345,24 @@ func updateCollectionsWithOneButNotTwo(conn *sql.Tx, fileCollectionController *T
 
 	logger.Info().Int("collectionsToUpdate", len(collectionsToUpdate)).Send()
 
+	removedCollections := make(map[int64]bool)
 	for _, fileCollectionID := range collectionsToUpdate {
-		time.Sleep(time.Second)
-		logger.Debug().Int64("fileCollectionID", fileCollectionID).Msg("Starting on File Collection")
-		fc, err := fileCollectionController.GetByID(fileCollectionID)
-		if err != nil {
-			return errors.Wrapf(err, "error getting file_collection %d", fileCollectionID)
+		// time.Sleep(time.Second)
+		if removedCollections[fileCollectionID] {
+			logger.Warn().Int64("removed", fileCollectionID).Msg("Skipping Removed Collection")
+			continue
 		}
+		logger.Debug().Int64("fileCollectionID", fileCollectionID).Msg("Starting on File Collection")
 
 		fvcOne, fvcTwo, err := fileCollectionController.CalculateFileCollectionVerificationCode(fileCollectionID)
 		if err != nil {
 			return errors.Wrapf(err, "error calculating file verification codes of %d", fileCollectionID)
 		}
 
-		if _, err := conn.Exec("UPDATE file_collection SET verification_code_one=$1, verification_code_two=$2 WHERE id=$3",
-			fvcOne, fvcTwo, fc.FileCollectionID); err != nil {
-			if err := resolveConflict(conn, fileCollectionController, err, fileCollectionID, fvcOne, fvcTwo); err != nil {
-				return err
-			}
+		if removed, err := updateMayConflict(conn, fileCollectionController, fileCollectionID, fvcOne, fvcTwo); err != nil {
+			return errors.Wrapf(err, "error updating file verification code of %d to (%x, %x)", fileCollectionID, fvcOne, fvcTwo)
+		} else if removed > 0 {
+			removedCollections[removed] = true
 		}
 	}
 	logger.Info().Msg("Returning")
@@ -378,7 +373,7 @@ func updateCollectionsWithOneButNotTwo(conn *sql.Tx, fileCollectionController *T
 func updateCollectionsMissingVerificationCodes(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController) error {
 	logger := log.With().Str(zerolog.CallerFieldName, "updateCollectionsMissingVerificationCodes").Logger()
 
-	rows, err := conn.Query("SELECT id FROM file_collection WHERE verification_code_two IS NULL AND verification_code_one IS NULL ORDER BY RANDOM()")
+	rows, err := conn.Query("SELECT id FROM file_collection WHERE verification_code_two IS NULL AND verification_code_one IS NULL ORDER BY id")
 	if err != nil {
 		return errors.Wrapf(err, "error selecting file_collections to work on")
 	}
@@ -407,26 +402,54 @@ func updateCollectionsMissingVerificationCodes(conn *sql.Tx, fileCollectionContr
 		}
 		logger.Debug().Int64("fileCollectionID", fileCollectionID).Hex("fvcOne", fvcOne).Hex("fvcTwo", fvcTwo).Msg("Calculated Verification Codes")
 
-		if _, err := conn.Exec("UPDATE file_collection SET verification_code_one=$2, verification_code_two=$3 WHERE id=$1",
-			fileCollectionID, fvcOne, fvcTwo); err != nil {
-			if err := resolveConflict(conn, fileCollectionController, err, fileCollectionID, fvcOne, fvcTwo); err != nil {
-				return err
-			}
+		if _, err := updateMayConflict(conn, fileCollectionController, fileCollectionID, fvcOne, fvcTwo); err != nil {
+			return errors.Wrapf(err, "error updating file_collection of %d to (%x, %x)", fileCollectionID, fvcOne, fvcTwo)
 		}
 	}
 
 	return nil
 }
 
-func resolveConflict(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController, conflict error, fileCollectionID int64, fvcOne []byte, fvcTwo []byte) error {
-	logger := log.With().Str(zerolog.CallerFieldName, "resolveConflict").Err(conflict).Int64("fileCollectionID", fileCollectionID).Hex("fvcOne", fvcOne).Hex("fvcTwo", fvcTwo).Logger()
+func updateMayConflict(tx *sql.Tx, fileCollectionController *TransactionFileCollectionController, fileCollectionID int64, fvcOne []byte, fvcTwo []byte) (removed int64, err error) {
+	logger := log.With().Str(zerolog.CallerFieldName, "updateMayConflict").Int64("fileCollectionID", fileCollectionID).Hex("fvcOne", fvcOne).Hex("fvcTwo", fvcTwo).Logger()
 	logger.Debug().Send()
-	// try resolving conflict
-	newer, older, err := determineNewestFileCollection(conn, fileCollectionController, conflict, fileCollectionID, fvcOne, fvcTwo)
+
+	preparedUpdate, err := tx.Prepare("UPDATE file_collection SET verification_code_one=$2, verification_code_two=$3 WHERE id=$1")
 	if err != nil {
-		return err
+		return 0, errors.Wrapf(err, "error preparing update statement")
+	}
+
+	// determine whether there will be a conflict
+	var count int
+	if err := tx.QueryRow("SELECT COUNT(*) FROM file_collection WHERE id<>$1 AND (verification_code_one=$2 OR verification_code_two=$3)",
+		fileCollectionID, fvcOne, fvcTwo).Scan(&count); err != nil {
+		return 0, errors.Wrapf(err, "error checking file_collection %d (%x, %x) for conflicts", fileCollectionID, fvcOne, fvcTwo)
+	}
+
+	if count == 0 { // just update, there should be no conflict
+		if _, err := preparedUpdate.Exec(fileCollectionID, fvcOne, fvcTwo); err != nil {
+			return 0, errors.Wrapf(err, "unexpected error while updating file_collection %d with (%x, %x)",
+				fileCollectionID, fvcOne, fvcTwo)
+		}
+
+		return 0, nil
+	} else if count > 1 { // more conflicts than we are prepared to deal with
+		logger.Warn().Int("count", count).Msg("More conflicts than expected")
+		return 0, errors.New(fmt.Sprintf("More confilcts than expected: %d", count))
+	}
+
+	var conflictingFileCollectionID int64
+	if err := tx.QueryRow("SELECT id FROM file_collection WHERE verification_code_one=$1 OR verification_code_two=$2",
+		fvcOne, fvcTwo).Scan(&conflictingFileCollectionID); err != nil {
+		return 0, errors.Wrapf(err, "error looking for conflict of file_collection %d (%x, %x)", fileCollectionID, fvcOne, fvcTwo)
+	}
+
+	// just one conlfict to resolve
+	newer, older, err := determineNewestFileCollection(tx, fileCollectionController, fileCollectionID, fvcOne, fvcTwo, conflictingFileCollectionID)
+	if err != nil {
+		return 0, err
 	} else if newer == nil || older == nil {
-		return errors.New(fmt.Sprintf("newer: %#v\nolder: %#v\nfileCollectionID: %d\nfvcOne: %x\nfvcTwo: %x\n",
+		return 0, errors.New(fmt.Sprintf("newer: %#v\nolder: %#v\nfileCollectionID: %d\nfvcOne: %x\nfvcTwo: %x\n",
 			newer,
 			older,
 			fileCollectionID,
@@ -437,28 +460,28 @@ func resolveConflict(conn *sql.Tx, fileCollectionController *TransactionFileColl
 
 	// check if older owned by newer
 	var isParent bool
-	if err := conn.QueryRow("SELECT EXISTS (SELECT 1 FROM file_collection_contains WHERE parent_id=$1 AND child_id=$2)",
+	if err := tx.QueryRow("SELECT EXISTS (SELECT 1 FROM file_collection_contains WHERE parent_id=$1 AND child_id=$2)",
 		newer.FileCollectionID, older.FileCollectionID).Scan(&isParent); err != nil {
-		return errors.Wrapf(err, "error checking if parent/child")
+		return 0, errors.Wrapf(err, "error checking if parent/child")
 	}
 
 	if isParent {
 		// check if newer has no other files or collections
 		var subCollectionCount int
-		if err := conn.QueryRow("SELECT COUNT(*) FROM file_collection_contains WHERE parent_id=$1 AND child_id<>$2",
+		if err := tx.QueryRow("SELECT COUNT(*) FROM file_collection_contains WHERE parent_id=$1 AND child_id<>$2",
 			newer.FileCollectionID, older.FileCollectionID).Scan(&subCollectionCount); err != nil {
-			return errors.Wrapf(err, "error counting children")
+			return 0, errors.Wrapf(err, "error counting children")
 		}
 
 		if subCollectionCount == 0 {
 			var fileCount int
-			if err := conn.QueryRow("SELECT COUNT(*) FROM file_belongs_collection WHERE file_collection_id=$1",
+			if err := tx.QueryRow("SELECT COUNT(*) FROM file_belongs_collection WHERE file_collection_id=$1",
 				newer.FileCollectionID).Scan(&fileCount); err != nil {
-				return errors.Wrapf(err, "error counting files")
+				return 0, errors.Wrapf(err, "error counting files")
 			}
 
 			if fileCount == 0 { // is solely a sub archive
-				return resolveSubArcive(conn, fileCollectionController, conflict, newer, older, fvcOne, fvcTwo)
+				return resolveSubArchive(tx, fileCollectionController, newer, older, fvcOne, fvcTwo)
 			}
 		}
 	}
@@ -466,15 +489,15 @@ func resolveConflict(conn *sql.Tx, fileCollectionController *TransactionFileColl
 	logger.Debug().Msg("Resloving generic conflict")
 
 	// move archives from old to new
-	if _, err := conn.Exec("UPDATE archive SET file_collection_id=$1 WHERE file_collection_id=$2",
+	if _, err := tx.Exec("UPDATE archive_table SET file_collection_id=$1 WHERE file_collection_id=$2",
 		newer.FileCollectionID, older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error moving archives from %d to %d", older.FileCollectionID, newer.FileCollectionID)
+		return 0, errors.Wrapf(err, "error moving archives from %d to %d", older.FileCollectionID, newer.FileCollectionID)
 	}
 
 	// delete owned file_collection_contains
-	if _, err := conn.Exec("DELETE FROM file_collection_contains WHERE parent_id=$1",
+	if _, err := tx.Exec("DELETE FROM file_collection_contains WHERE parent_id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error deleting owned file_collections")
+		return 0, errors.Wrapf(err, "error deleting owned file_collections")
 	}
 
 	// move file_collection_contains from old to new
@@ -483,37 +506,37 @@ func resolveConflict(conn *sql.Tx, fileCollectionController *TransactionFileColl
 		"WHERE fcc.child_id=$2 " +
 		"AND NOT EXISTS (SELECT 1 FROM file_collection_contains WHERE child_id=$1 AND parent_id=fcc.parent_id) " +
 		"AND fcc.parent_id<>$1"
-	if _, err := conn.Exec(sql,
+	if _, err := tx.Exec(sql,
 		newer.FileCollectionID, older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error moving file_collection_contains from %d to %d\n%s", older.FileCollectionID, newer.FileCollectionID, sql)
+		return 0, errors.Wrapf(err, "error moving file_collection_contains from %d to %d\n%s", older.FileCollectionID, newer.FileCollectionID, sql)
 
 	}
 	// delete any remaining file_collection_contains
-	if _, err := conn.Exec("DELETE FROM file_collection_contains WHERE child_id=$1",
+	if _, err := tx.Exec("DELETE FROM file_collection_contains WHERE child_id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error moving file_collection_contains from %d to %d", older.FileCollectionID, newer.FileCollectionID)
+		return 0, errors.Wrapf(err, "error moving file_collection_contains from %d to %d", older.FileCollectionID, newer.FileCollectionID)
 	}
 
 	// delete old
-	if _, err := conn.Exec("DELETE FROM file_belongs_collection WHERE file_collection_id=$1",
+	if _, err := tx.Exec("DELETE FROM file_belongs_collection WHERE file_collection_id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error removing files from old %d", older.FileCollectionID)
+		return 0, errors.Wrapf(err, "error removing files from old %d", older.FileCollectionID)
 	}
-	if _, err := conn.Exec("DELETE FROM archive_contains WHERE child_id=$1",
+	if _, err := tx.Exec("DELETE FROM archive_contains WHERE child_id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error deleting archive_contains %d", older.FileCollectionID)
+		return 0, errors.Wrapf(err, "error deleting archive_contains %d", older.FileCollectionID)
 	}
-	if _, err := conn.Exec("DELETE FROM file_collection WHERE id=$1",
+	if _, err := tx.Exec("DELETE FROM file_collection WHERE id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error deleting file_collection %d", older.FileCollectionID)
+		return 0, errors.Wrapf(err, "error deleting file_collection %d", older.FileCollectionID)
 	}
 
 	logger.Debug().Msg("Resolved generic conflict")
-	return nil
+	return older.FileCollectionID, nil
 }
 
-func resolveSubArcive(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController, conflict error, newer *file_collection.FileCollection, older *file_collection.FileCollection, fvcOne []byte, fvcTwo []byte) error {
-	logger := log.With().Str(zerolog.CallerFieldName, "resolveSubArchive").Err(conflict).Int64("newer", newer.FileCollectionID).Int64("older", older.FileCollectionID).Hex("fvcOne", fvcOne).Hex("fvcTwo", fvcTwo).Logger()
+func resolveSubArchive(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController, newer *file_collection.FileCollection, older *file_collection.FileCollection, fvcOne []byte, fvcTwo []byte) (removed int64, err error) {
+	logger := log.With().Str(zerolog.CallerFieldName, "resolveSubArchive").Int64("newer", newer.FileCollectionID).Int64("older", older.FileCollectionID).Hex("fvcOne", fvcOne).Hex("fvcTwo", fvcTwo).Logger()
 	logger.Debug().Send()
 
 	// move owned files
@@ -521,12 +544,12 @@ func resolveSubArcive(conn *sql.Tx, fileCollectionController *TransactionFileCol
 		"WHERE fbc.file_collection_id=$2 "+
 		"AND NOT EXISTS (SELECT 1 FROM file_belongs_collection WHERE file_collection_id=$1 AND file_id=fbc.file_id)",
 		newer.FileCollectionID, older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error moving sub-files")
+		return 0, errors.Wrapf(err, "error moving sub-files")
 	}
 	// delete remaining
 	if _, err := conn.Exec("DELETE FROM file_belongs_collection WHERE file_collection_id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error deleting remaining sub-files")
+		return 0, errors.Wrapf(err, "error deleting remaining sub-files")
 	}
 
 	// move owned sub-collections
@@ -534,18 +557,18 @@ func resolveSubArcive(conn *sql.Tx, fileCollectionController *TransactionFileCol
 		"WHERE fcc.parent_id=$2 "+
 		"AND NOT EXISTS (SELECT 1 FROM file_collection_contains WHERE parent_id=$1 AND child_id=fcc.child_id)",
 		newer.FileCollectionID, older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error moving sub-collections")
+		return 0, errors.Wrapf(err, "error moving sub-collections")
 	}
 	// delete remaining
 	if _, err := conn.Exec("DELETE FROM file_collection_contains WHERE parent_id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error deleting remaining sub-files")
+		return 0, errors.Wrapf(err, "error deleting remaining sub-files")
 	}
 
 	// delete parent/child relationship
 	if _, err := conn.Exec("DELETE FROM file_collection_contains WHERE parent_id=$1 AND child_id=$2",
 		newer.FileCollectionID, older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error deleting parent/child relationship")
+		return 0, errors.Wrapf(err, "error deleting parent/child relationship")
 	}
 
 	// move other parents
@@ -553,29 +576,35 @@ func resolveSubArcive(conn *sql.Tx, fileCollectionController *TransactionFileCol
 		"WHERE fcc.child_id=$2 "+
 		"AND NOT EXISTS (SELECT 1 FROM file_collection_contains WHERE child_id=$1 AND parent_id=fcc.parent_id)",
 		newer.FileCollectionID, older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error moving sub-collections")
+		return 0, errors.Wrapf(err, "error moving sub-collections")
+	}
+
+	// move archive parents
+	if _, err := conn.Exec("UPDATE archive_contains SET child_id=$1 WHERE child_id=$2",
+		newer.FileCollectionID, older.FileCollectionID); err != nil {
+		return 0, errors.Wrapf(err, "error moving archive parents")
 	}
 
 	// delete remaining parents
 	if _, err := conn.Exec("DELETE FROM file_collection_contains WHERE child_id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error deleting parent relationships")
+		return 0, errors.Wrapf(err, "error deleting parent relationships")
 	}
 
 	// move archives from old to new
-	if _, err := conn.Exec("UPDATE archive SET file_collection_id=$1 WHERE file_collection_id=$2",
+	if _, err := conn.Exec("UPDATE archive_table SET file_collection_id=$1 WHERE file_collection_id=$2",
 		newer.FileCollectionID, older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error moving archives from %d to %d", older.FileCollectionID, newer.FileCollectionID)
+		return 0, errors.Wrapf(err, "error moving archives from %d to %d", older.FileCollectionID, newer.FileCollectionID)
 	}
 
 	// delete collection
 	if _, err := conn.Exec("DELETE FROM file_collection WHERE id=$1",
 		older.FileCollectionID); err != nil {
-		return errors.Wrapf(err, "error deleting file_collection %d", older.FileCollectionID)
+		return 0, errors.Wrapf(err, "error deleting file_collection %d", older.FileCollectionID)
 	}
 
 	logger.Debug().Msg("Resolved sub-archive")
-	return nil
+	return older.FileCollectionID, nil
 }
 
 func parseDateTime(dateString string) (*time.Time, error) {
@@ -634,7 +663,9 @@ func (controller TransactionFileCollectionController) GetByVerificationCode(veri
 
 	var ret file_collection.FileCollection
 	if err := controller.Tx.QueryRow(query, verificationCode).
-		Scan(&ret.FileCollectionID, &ret.InsertDate, &ret.GroupID, &ret.Extracted, &ret.LicenseExtracted, &ret.LicenseID, &ret.LicenseRationale, &ret.AnalystID, &ret.LicenseExpression, &ret.LicenseNotice, &ret.Copyright, &ret.VerificationCodeOne, &ret.VerificationCodeTwo); err != nil {
+		Scan(&ret.FileCollectionID, &ret.InsertDate, &ret.GroupID, &ret.Extracted, &ret.LicenseExtracted, &ret.LicenseID, &ret.LicenseRationale, &ret.AnalystID, &ret.LicenseExpression, &ret.LicenseNotice, &ret.Copyright, &ret.VerificationCodeOne, &ret.VerificationCodeTwo,
+			&ret.GroupName,
+			&ret.LicenseExpression); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
@@ -658,7 +689,9 @@ func (controller TransactionFileCollectionController) GetByID(fileCollectionID i
 		"LEFT JOIN license_expression AS l ON l.id=fc.license_id "+
 		"WHERE fc.id=$1",
 		fileCollectionID).
-		Scan(&ret.FileCollectionID, &ret.InsertDate, &ret.GroupID, &ret.Extracted, &ret.LicenseExtracted, &ret.LicenseID, &ret.LicenseRationale, &ret.AnalystID, &ret.LicenseExpression, &ret.LicenseNotice, &ret.Copyright, &ret.VerificationCodeOne, &ret.VerificationCodeTwo); err != nil {
+		Scan(&ret.FileCollectionID, &ret.InsertDate, &ret.GroupID, &ret.Extracted, &ret.LicenseExtracted, &ret.LicenseID, &ret.LicenseRationale, &ret.AnalystID, &ret.LicenseExpression, &ret.LicenseNotice, &ret.Copyright, &ret.VerificationCodeOne, &ret.VerificationCodeTwo,
+			&ret.GroupName,
+			&ret.LicenseExpression); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, ErrNotFound
 		}
@@ -678,7 +711,7 @@ func (p *TransactionFileCollectionController) CalculateFileCollectionVerificatio
 	// Select all files and feed to verification code
 	rows, err := p.Tx.Query("SELECT f.checksum_sha1, f.checksum_sha256 "+
 		"FROM file_belongs_collection fbc "+
-		"INNER JOIN file f ON f.id=fbc.file_id "+
+		"INNER JOIN file_table f ON f.id=fbc.file_id "+
 		"WHERE fbc.file_collection_id=$1 AND flag_symlink=0 AND flag_fifo=0", fileCollectionID)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "error selecting files of file_collection %d", fileCollectionID)
@@ -717,7 +750,7 @@ func (p *TransactionFileCollectionController) CalculateFileCollectionVerificatio
 			// Select all files and feed to verification code
 			rows, err = p.Tx.Query("SELECT f.checksum_sha1, f.checksum_sha256 "+
 				"FROM file_belongs_collection fbc "+
-				"INNER JOIN file f ON f.id=fbc.file_id "+
+				"INNER JOIN file_table f ON f.id=fbc.file_id "+
 				"WHERE fbc.file_collection_id=$1", collectionID)
 			if err != nil {
 				return errors.Wrapf(err, "error selecting files of collection %d", collectionID)

@@ -9,9 +9,15 @@ DO LANGUAGE plpgsql $$
 DECLARE
     _file file_table%ROWTYPE;
 BEGIN
-    FOR _file IN SELECT * FROM file_table WHERE _file.checksum_sha256 IS NOT NULL ORDER BY id
+    FOR _file IN SELECT * FROM file_table WHERE checksum_sha256 IS NOT NULL ORDER BY id
     LOOP
-        INSERT INTO file (sha256, file_size, md5, sha1) VALUES (_file.checksum_sha256, _file.size, _file.checksum_md5, _file.checksum_sha1);
+        INSERT INTO file (sha256, file_size, md5, sha1) 
+        VALUES (
+                decode(_file.checksum_sha256, 'hex'), 
+                _file.size, 
+                decode(_file.checksum_md5, 'hex'), 
+                decode(_file.checksum_sha1, 'hex')
+        );
     END LOOP;
 END;
 $$;
@@ -24,9 +30,13 @@ DECLARE
     _record RECORD;
     _sha1 BYTEA;
 BEGIN
-    FOR _record IN SELECT file_alias_table.name, file_table.checksum_sha256 FROM file_alias_table INNER JOIN file_table ON file_table.id=file_alias_table.file_id WHERE file_table.checksum_sha256 IS NOT NULL ORDER BY file_alias_table.id
+    FOR _record IN 
+    SELECT file_alias_table.name, decode(file_table.checksum_sha256, 'hex') as sha256 
+    FROM file_alias_table 
+    INNER JOIN file_table ON file_table.id=file_alias_table.file_id 
+    WHERE file_table.checksum_sha256 IS NOT NULL ORDER BY file_alias_table.id
     LOOP        
-        INSERT INTO file_alias (file_sha256, name) VALUES (_record.checksum_sha256, _record.name);
+        INSERT INTO file_alias (file_sha256, name) VALUES (_record.sha256, _record.name);
     END LOOP;
 END;
 $$;
