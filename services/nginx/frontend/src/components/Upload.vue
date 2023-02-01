@@ -5,22 +5,36 @@
         density="compact"
         :label="message"
         :accept="type"
+        :prepend-icon="icon"
         multiple
         v-model="files"
         variant="outlined"
         bg-color="white"
       >
         <template v-slot:selection="{ fileNames }">
-          <template v-for="fileName in fileNames" :key="fileName">
-            <v-chip size="small" label color="primary" class="mr-1">
-              {{ fileName }}
+          <template v-for="(fileName, index) in fileNames" :key="fileName">
+            <v-chip
+              v-if="index < 7"
+              size="small"
+              label
+              color="primary"
+              class="mr-1"
+            >
+              {{ fileName.length > 24? fileName.substring(0,6) +".."+ fileName.substring(fileName.length - 7) : fileName}}
             </v-chip>
+            <span v-else-if="index === 7">
+              +{{ fileNames.length - 7 }} others...
+            </span>
           </template>
         </template>
       </v-file-input>
     </v-row>
     <v-row class="align-center">
-      <v-btn density="compact" color="primary" @click="emit('sendFiles', files)">
+      <v-btn
+        density="compact"
+        color="primary"
+        @click="emit('sendFiles', files)"
+      >
         Upload
       </v-btn>
       <v-progress-circular
@@ -42,6 +56,7 @@ const files: Ref<File[]> = ref([])
 const props = defineProps<{
   message: string
   type: string
+  icon: string
   processing: boolean
 }>()
 

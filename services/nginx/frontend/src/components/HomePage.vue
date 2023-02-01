@@ -26,7 +26,7 @@
         striped
         color="primary"
       ></v-progress-linear>
-      <h3 v-if="queryError" class="my-4">{{ queryError }}</h3>
+      <h3 v-if="queryError">{{queryError.networkError? "Network Unavailable": "Search query matched too many results."}}</h3>
       <h3 v-if="data && data.find_archive.length === 0" class="my-4">
         No results found
       </h3>
@@ -38,10 +38,9 @@
         <tr>
           <th>{{ searchStore.results.length }}</th>
           <th>Name</th>
+          <th>License</th>
           <th>Date</th>
           <th>SHA256/SHA1</th>
-          <th>License</th>
-          <th>Extraction Status</th>
         </tr>
       </thead>
       <tbody>
@@ -53,6 +52,7 @@
         >
           <td>{{ index + 1 }}</td>
           <td>{{ row.archive.name }}</td>
+          <td>{{ row.archive.file_collection.license? row.archive.file_collection.license.name : "" }}</td>
           <td>
             {{ new Date(row.archive.insert_date).toLocaleDateString() }}
           </td>
@@ -62,10 +62,6 @@
                 ? "SHA256:" + row.archive.sha256.substring(0, 10) + "..."
                 : "SHA1:" + row.archive.sha1.substring(0, 10) + "..."
             }}
-          </td>
-          <td>{{ row.archive.file_collection.license? row.archive.file_collection.license.name : "" }}</td>
-          <td>
-            {{ row.archive.extract_status === 0 ? "Complete" : "In Progress" }}
           </td>
         </tr>
       </tbody>

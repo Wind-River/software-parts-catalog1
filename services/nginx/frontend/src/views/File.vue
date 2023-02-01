@@ -2,11 +2,12 @@
 <template>
   <v-container>
     <div class="d-flex flex-column align-center">
-      <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-50">
+      <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-75">
         <h3 class="px-8">Upload Parts</h3>
         <Upload
           type="application/*"
           message="Click to select files"
+          icon="mdi-upload"
           :processing="processing"
           @sendFiles="handleUpload"
         />
@@ -22,7 +23,7 @@
           <tr v-for="(archive, index) in uploadedArchives" :key="index">
             <td>{{ archive.name }}</td>
             <td>{{ archive.sha256 ? archive.sha256 : archive.sha1 }}</td>
-            <td><v-icon icon="mdi-check" color="primary"></v-icon></td>
+            <td><v-icon color="primary">{{ archive.file_collection? "mdi-check": "mdi-update"}}</v-icon></td>
           </tr>
         </tbody>
       </v-table>
@@ -37,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { useMutation } from "@urql/vue"
+import { useMutation, useQuery } from "@urql/vue"
 import { Ref, ref } from "vue"
 import download from "downloadjs"
 import Upload from "@/components/Upload.vue"
@@ -89,6 +90,60 @@ const uploadMutation = useMutation(`
   }
 `)
 
+const incompleteUploads: Ref<string[]> = ref([])
+const currentName: Ref<string> = ref("")
+const archiveQuery = useQuery({
+  query: `
+  query($archiveName: String){
+    archive(name: $archiveName){
+      id
+      name
+      insert_date
+      sha256
+      sha1
+      extract_status
+      file_collection_id
+      file_collection{
+        verification_code_one
+        verification_code_two
+        license_expression
+        license_rationale
+        license_notice
+        copyright
+      }
+    }
+  }`,
+  variables: { archiveName: currentName },
+})
+const queryResponse = archiveQuery.data
+const queryError = archiveQuery.error
+const queryFetching = archiveQuery.fetching
+
+async function processIncomplete() {
+  for (const name of incompleteUploads.value) {
+    const result = await retrieveArchive(name)
+    uploadedArchives.value.push(result)
+  }
+  processing.value = false
+  showDialog.value = true
+  incompleteUploads.value = []
+}
+
+async function retrieveArchive(name: string){
+  currentName.value = name
+  await archiveQuery.executeQuery()
+  if(queryResponse.value.archive.name === name){
+    return queryResponse.value.archive
+  }
+  if(queryError.value){
+    console.log(queryError.value)
+  }
+  if(queryFetching.value){
+    console.log(queryFetching.value)
+  }
+  return
+}
+
 function convertToCSV(arr: Archive[]) {
   const array = [
     "name",
@@ -137,7 +192,6 @@ function downloadCSV() {
 async function handleUpload(files: File[]) {
   processing.value = true
   console.log(files)
-  uploadedArchives.value = []
   let retry = false
   for (const file of files) {
     await uploadMutation
@@ -145,7 +199,13 @@ async function handleUpload(files: File[]) {
       .then((value) => {
         if (value.error) {
           console.log(value.error)
-          retry = true
+          if (
+            value.error?.message ===
+            "[GraphQL] the requested element is null which the schema does not allow"
+          ) {
+            incompleteUploads.value.push(file.name)
+            retry = true
+          }
         }
         return value
       })
@@ -156,7 +216,7 @@ async function handleUpload(files: File[]) {
       })
   }
   if (retry) {
-    handleUpload(files)
+    processIncomplete()
   } else {
     processing.value = false
     showDialog.value = true

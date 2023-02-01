@@ -2,16 +2,17 @@
 <template>
   <v-container>
     <div class="d-flex flex-column align-center">
-      <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-50">
+      <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-75">
         <h3 class="px-8">Update Part Details</h3>
         <Upload
           type="text/csv"
           message="Click to select CSV"
+          icon="mdi-table-edit"
           :processing="processing"
           @sendFiles="handleUpload"
         />
       </v-card>
-      <v-table v-if="uploadedCSV.length > 0" class="ma-4">
+      <v-table v-if="uploadedCSV.length > 0 && !graphqlError" class="my-4">
         <thead>
           <tr>
             <th>Name</th>
@@ -26,7 +27,6 @@
             <td>{{ csv.verification_code }}</td>
             <td>{{ csv.license }}</td>
             <td>{{ csv.license_rationale }}</td>
-            <td><v-icon icon="mdi-check" color="primary"></v-icon></td>
           </tr>
         </tbody>
       </v-table>
@@ -73,6 +73,8 @@ const updateMutation = useMutation(`
     }
   }
 `)
+
+const graphqlError = updateMutation.error
 
 function parseCSV(file: File): Promise<UpdateCSV[]> {
   return new Promise((resolve, reject) => {
