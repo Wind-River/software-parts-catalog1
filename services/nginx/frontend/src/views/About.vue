@@ -21,7 +21,9 @@
   </div>
 </template>
 <script setup lang="ts">
-const catalogName: string = "windriver.com/spc-prod-1"
+import router from '@/router';
+
+const catalogName: string = window.location.href.substring(0, window.location.href.indexOf("/app")) ||"windriver.com/spc-prod-1"
 const serverVersion: number = 1.0
 const uiVersion: number = 1.0
 const totalParts: string = "TBD"
