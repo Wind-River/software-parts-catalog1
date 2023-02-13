@@ -11,6 +11,7 @@
           :processing="processing"
           @sendFiles="handleUpload"
         />
+        <div class="text-subtitle align-self-end">{{ processedFiles +"/"+ fileCount }}</div>
       </v-card>
       <v-table v-if="uploadedArchives.length > 0" class="ma-4">
         <thead>
@@ -65,6 +66,8 @@ type FileCollection = {
 const uploadedArchives: Ref<Archive[]> = ref([])
 const processing: Ref<boolean> = ref(false)
 const showDialog: Ref<boolean> = ref(false)
+const fileCount: Ref<number> = ref(0)
+const processedFiles: Ref<number> = ref(0)
 
 const uploadMutation = useMutation(`
   mutation($file: Upload!){
@@ -191,9 +194,10 @@ function downloadCSV() {
 
 async function handleUpload(files: File[]) {
   processing.value = true
-  console.log(files)
+  fileCount.value = files.length
   let retry = false
   for (const file of files) {
+    processedFiles.value++
     await uploadMutation
       .executeMutation({ file: file })
       .then((value) => {
