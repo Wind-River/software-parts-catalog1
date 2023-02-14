@@ -1,12 +1,3 @@
-<script setup lang="ts">
-//Initialize navigation drawer links
-const items = [
-  { text: "Home", link: "/" },
-  { text: "Add", link: "/file" },
-  { text: "Update", link: "/update" },
-  { text: "About", link: "/about" },
-]
-</script>
 <template>
   <v-app>
     <v-app-bar density="compact">
@@ -28,3 +19,14 @@ const items = [
     </v-main>
   </v-app>
 </template>
+<script setup lang="ts">
+import { provide } from "vue"
+//Initialize navigation drawer links
+const items = [
+  { text: "Home", link: "/" },
+  { text: "Add", link: "/file" },
+  { text: "Update", link: "/update" },
+  { text: "About", link: "/about" },
+]
+provide("version", 1.0)
+</script>

@@ -13,18 +13,29 @@
       </div>
     </v-container>
     <div class="d-flex w-100 mt-auto pr-8 bg-secondary justify-end">
-      <div class="mx-1 text-grey-darken-1 text-caption">Catalog: {{ catalogName }}</div>
-      <div class="mx-1 text-grey-darken-1 text-caption">Total Parts: {{ totalParts }}</div>
-      <div class="mx-1 text-grey-darken-1 text-caption">UI: {{ uiVersion.toPrecision(3) }}</div>
-      <div class="mx-1 text-grey-darken-1 text-caption">Server: {{ serverVersion.toPrecision(3) }}</div>
+      <div class="mx-1 text-grey-darken-1 text-caption">
+        Catalog: {{ catalogName }}
+      </div>
+      <div class="mx-1 text-grey-darken-1 text-caption">
+        Total Parts: {{ totalParts }}
+      </div>
+      <div class="mx-1 text-grey-darken-1 text-caption">
+        UI: {{ uiVersion?.toPrecision(3) }}
+      </div>
+      <div class="mx-1 text-grey-darken-1 text-caption">
+        Server: {{ serverVersion.toPrecision(3) }}
+      </div>
     </div>
   </div>
 </template>
 <script setup lang="ts">
-import router from '@/router';
+import router from "@/router"
+import { inject } from "vue"
 
-const catalogName: string = window.location.href.substring(0, window.location.href.indexOf("/app")) ||"windriver.com/spc-prod-1"
+const catalogName: string =
+  window.location.href.substring(0, window.location.href.indexOf("/app")) ||
+  "windriver.com/spc-prod-1"
 const serverVersion: number = 1.0
-const uiVersion: number = 1.0
+const uiVersion: number | undefined = inject("version")
 const totalParts: string = "TBD"
 </script>
