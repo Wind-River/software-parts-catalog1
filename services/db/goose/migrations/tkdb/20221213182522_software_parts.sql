@@ -31,14 +31,15 @@ CREATE TABLE IF NOT EXISTS part (
 CREATE OR REPLACE FUNCTION calculate_part_verification_code_v2(_pid UUID) RETURNS BYTEA LANGUAGE plpgsql AS $$
     DECLARE
         _row RECORD;
-        _shas BYTEA[] := ARRAY[]::SHA256_BYTEA[];
-        _data SHA256_BYTEA := '';
+        _shas SHA256_BYTEA[] := ARRAY[]::SHA256_BYTEA[];
+        _data BYTEA := '';
         _vcode BYTEA;
     BEGIN
         FOR _row IN SELECT f.sha256 FROM file f
             INNER JOIN part_has_file phf ON phf.file_sha256=f.sha256
             INNER JOIN part p ON p.part_id=phf.part_id
             WHERE p.part_id = _pid
+            AND f.sha256 IS NOT NULL
         LOOP
             _shas := _shas || _row.sha256;
         END LOOP;
@@ -53,6 +54,7 @@ CREATE OR REPLACE FUNCTION calculate_part_verification_code_v2(_pid UUID) RETURN
             INNER JOIN part_has_file phf ON phf.file_sha256=f.sha256
             INNER JOIN part p ON p.part_id=phf.part_id
             INNER JOIN parts ON parts.part_id=p.part_id
+            WHERE f.sha256 IS NOT NULL
         LOOP
             _shas := _shas || _row.sha256;
         END LOOP;
@@ -98,7 +100,8 @@ CREATE TRIGGER verify_part_file_verification_code_trigger BEFORE INSERT OR UPDAT
 CREATE TABLE IF NOT EXISTS part_has_part (
     parent_id UUID REFERENCES part(part_id),
     child_id UUID REFERENCES part(part_id),
-    PRIMARY KEY(parent_id, child_id)
+    path TEXT,
+    PRIMARY KEY(parent_id, child_id, path),
 );
 
 CREATE TABLE IF NOT EXISTS part_alias (
@@ -139,7 +142,8 @@ CREATE TABLE IF NOT EXISTS file_alias (
 CREATE TABLE IF NOT EXISTS part_has_file (
     part_id UUID REFERENCES part(part_id),
     file_sha256 SHA256_BYTEA REFERENCES file(sha256),
-    PRIMARY KEY(part_id, file_sha256)
+    PATH TEXT NOT NULL,
+    PRIMARY KEY(part_id, file_sha256, path)
 );
 
 -- File Documents
