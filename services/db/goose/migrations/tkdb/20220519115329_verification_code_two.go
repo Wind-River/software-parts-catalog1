@@ -5,7 +5,7 @@ package tkdb
 import (
 	"database/sql"
 	"runtime"
-	"wrs/tk/generics/graph"
+	"wrs/tkdb/goose/packages/generics/graph"
 
 	"gitlab.devstar.cloud/ip-systems/verification-code.git/code"
 

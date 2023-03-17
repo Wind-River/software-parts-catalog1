@@ -1,0 +1,4 @@
+artifact="triple_ancestry.tar.bz2"
+error_expected=false
+[verification_codes]
+v2="46564332008212620f390c6169d914cb1115bc0c36c39532346f3c2a4e743f6ed25abc6646"

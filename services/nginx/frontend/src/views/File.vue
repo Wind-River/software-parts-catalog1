@@ -5,16 +5,21 @@
       <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-75">
         <h3 class="px-8">Upload Parts</h3>
         <Upload
-          type="application/*"
+          type="application/*,.bz2,.xz"
           message="Click to select files"
           icon="mdi-upload"
           :processing="processing"
           @sendFiles="handleUpload"
         />
-        <div class="text-subtitle align-self-end">{{ processedFiles +"/"+ fileCount }}</div>
+        <div class="text-subtitle align-self-end">
+          {{ processedFiles + "/" + fileCount }}
+        </div>
       </v-card>
       <v-table v-if="uploadedArchives.length > 0" class="ma-4">
         <thead>
+          <tr>
+            <th>{{ processedFiles + "/" + fileCount }}</th>
+          </tr>
           <tr>
             <th>Name</th>
             <th>Checksum</th>
@@ -24,7 +29,11 @@
           <tr v-for="(archive, index) in uploadedArchives" :key="index">
             <td>{{ archive.name }}</td>
             <td>{{ archive.sha256 ? archive.sha256 : archive.sha1 }}</td>
-            <td><v-icon color="primary">{{ archive.file_collection? "mdi-check": "mdi-update"}}</v-icon></td>
+            <td>
+              <v-icon color="primary">{{
+                archive.part ? "mdi-check" : "mdi-update"
+              }}</v-icon>
+            </td>
           </tr>
         </tbody>
       </v-table>
@@ -40,79 +49,92 @@
 
 <script setup lang="ts">
 import { useMutation, useQuery } from "@urql/vue"
-import { Ref, ref } from "vue"
+import { onBeforeMount, Ref, ref } from "vue"
 import download from "downloadjs"
 import Upload from "@/components/Upload.vue"
+import { useRoute } from "vue-router"
 
+//Defines the data types expected to be returned from the catalog
 type Archive = {
-  id: number
   name: string
   insert_date: string
   sha256: string
   sha1: string
-  extract_status: string
-  file_collection_id: string
-  file_collection: FileCollection
+  part_id: string
+  part: Part
 }
-type FileCollection = {
-  verification_code_one: string
-  verification_code_two: string
-  license_expression: string
+type Part = {
+  file_verification_code: string
+  license: string
   license_rationale: string
   license_notice: string
-  copyright: string
 }
 
+//Various refs used in file upload processing
 const uploadedArchives: Ref<Archive[]> = ref([])
 const processing: Ref<boolean> = ref(false)
 const showDialog: Ref<boolean> = ref(false)
 const fileCount: Ref<number> = ref(0)
 const processedFiles: Ref<number> = ref(0)
 
+//Mutation is responsible for uploading files to the catalog and returning archive data
 const uploadMutation = useMutation(`
   mutation($file: Upload!){
     uploadArchive(file: $file){
       archive{
-        id
         name
-        insert_date
         sha256
         sha1
-        extract_status
-        file_collection_id
-        file_collection{
-          verification_code_one
-          verification_code_two
-          license_expression
+        Size
+        md5
+        part_id
+        part{
+          id
+          type
+          name
+          version
+          family_name
+          file_verification_code
+          size
+          license
           license_rationale
           license_notice
-          copyright
+          automation_license
+          automation_license_rationale
+          comprised
         }
       }
     }
   }
 `)
 
+//Responsible for handling archives on first upload to catalog
 const incompleteUploads: Ref<string[]> = ref([])
 const currentName: Ref<string> = ref("")
 const archiveQuery = useQuery({
   query: `
   query($archiveName: String){
     archive(name: $archiveName){
-      id
       name
-      insert_date
       sha256
       sha1
-      extract_status
-      file_collection_id
-      file_collection{
-        verification_code_one
-        verification_code_two
-        license_expression
+      Size
+      md5
+      part_id
+      part{
+        id
+        type
+        name
+        version
+        family_name
+        file_verification_code
+        size
+        license
         license_rationale
         license_notice
-        copyright
+        automation_license
+        automation_license_rationale
+        comprised
       }
     }
   }`,
@@ -122,31 +144,40 @@ const queryResponse = archiveQuery.data
 const queryError = archiveQuery.error
 const queryFetching = archiveQuery.fetching
 
+//Processes any archives that returned invalid data typically due to first upload
 async function processIncomplete() {
   for (const name of incompleteUploads.value) {
     const result = await retrieveArchive(name)
     uploadedArchives.value.push(result)
   }
   processing.value = false
+  if (pid.value != undefined) {
+      addToPartList(uploadedArchives.value)
+    }
   showDialog.value = true
   incompleteUploads.value = []
 }
 
-async function retrieveArchive(name: string){
+//Retrieves information about given archive from catalog
+async function retrieveArchive(name: string) {
   currentName.value = name
   await archiveQuery.executeQuery()
-  if(queryResponse.value.archive.name === name){
+  if (queryResponse.value.archive.name === name) {
     return queryResponse.value.archive
   }
-  if(queryError.value){
+  if (queryError.value) {
     console.log(queryError.value)
   }
-  if(queryFetching.value){
+  if (queryFetching.value) {
     console.log(queryFetching.value)
+  }
+  if (queryResponse.value.archive === null) {
+    retrieveArchive(name)
   }
   return
 }
 
+//Converts returned archive and part data into downloadable csv
 function convertToCSV(arr: Archive[]) {
   const array = [
     "name",
@@ -162,18 +193,15 @@ function convertToCSV(arr: Archive[]) {
 
   const parsedArr = arr
     .map((archive) => {
-      if (archive.file_collection !== null) {
+      if (archive.part !== null) {
         return [
           archive.name,
           archive.insert_date,
           archive.sha256 ? archive.sha256 : archive.sha1,
-          archive.file_collection.verification_code_two
-            ? archive.file_collection.verification_code_two
-            : archive.file_collection.verification_code_one,
-          archive.file_collection.license_expression,
-          archive.file_collection.license_rationale,
-          archive.file_collection.license_notice,
-          archive.file_collection.copyright,
+          archive.part.file_verification_code,
+          archive.part.license,
+          archive.part.license_rationale,
+          archive.part.license_notice,
         ].toString()
       } else
         return [
@@ -187,14 +215,16 @@ function convertToCSV(arr: Archive[]) {
   return array.toString() + parsedArr
 }
 
+//Converts data into csv format and then allows user to download csv file
 function downloadCSV() {
   download(convertToCSV(uploadedArchives.value), "tk-prefilled", "text/csv")
   showDialog.value = false
 }
 
+//Uses file upload component to upload files to catalog
 async function handleUpload(files: File[]) {
   processing.value = true
-  fileCount.value = files.length
+  fileCount.value += files.length
   let retry = false
   for (const file of files) {
     processedFiles.value++
@@ -223,7 +253,56 @@ async function handleUpload(files: File[]) {
     processIncomplete()
   } else {
     processing.value = false
+    if (pid.value != undefined) {
+      addToPartList(uploadedArchives.value)
+    }
     showDialog.value = true
   }
 }
+
+//If a partlist has been selected to add parts this will perform that mutation
+const partListMutation = useMutation(`
+mutation($id: Int64!, $parts: [UUID]){
+  updatePartList(id: $id, parts: $parts){
+    id
+    name
+    parent_id
+  }
+}
+`)
+
+async function addToPartList(archives: Archive[]) {
+  const partIDS: string[] = []
+  for (const archive of archives){
+    if (archive.part_id){
+      partIDS.push(archive.part_id)
+    }
+  }
+  await partListMutation.executeMutation({id: pid.value, parts: partIDS}).then((value) => {
+    if (value.error){
+      console.log(value.error)
+    }
+    if(value.data){
+      console.log(value.data)
+    }
+  })
+}
+
+//Responsible for checking if a partlist has been selected to add parts to
+const route = useRoute()
+const pid: Ref<number | undefined> = ref()
+
+onBeforeMount(function () {
+  var id: string
+  if (route.params.id === undefined) {
+    return
+  } else if (typeof route.params.id === "string") {
+    id = route.params.id
+  } else {
+    id = route.params.id[0]
+  }
+
+  pid.value = parseInt(id)
+  console.log(pid.value)
+})
 </script>

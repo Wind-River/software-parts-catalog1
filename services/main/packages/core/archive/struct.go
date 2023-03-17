@@ -15,22 +15,29 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
+	"wrs/tk/packages/array/hash"
 	"wrs/tk/packages/blob"
+	"wrs/tk/packages/blob/file"
+	"wrs/tk/packages/core/archive/processor"
+	"wrs/tk/packages/core/archive/sync"
+	"wrs/tk/packages/core/archive/tree"
+	"wrs/tk/packages/core/part"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/gabriel-vasile/mimetype"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"gitlab.devstar.cloud/ip-systems/extract.git"
 )
 
 type ArchiveController struct {
@@ -157,7 +164,7 @@ func (p *ArchiveController) run() error {
 		}
 		log.Trace().Interface("message", m).Msg("Received message")
 
-		if err := p.process(m.archive, m.archive.Name.String); err != nil {
+		if err := p.process(m.archive, m.archive.Aliases[0]); err != nil {
 			m.returnChannel <- err
 		}
 
@@ -175,11 +182,11 @@ func (p *ArchiveController) Process(arch *Archive) error {
 		}
 	}
 
-	if arch.ArchiveID == -1 {
-		if err := p.SyncArchive(p.DB, arch); err != nil {
-			return err
-		}
+	// if arch.ArchiveID == -1 { // TODO? determine if archive in database?
+	if err := p.SyncArchive(p.DB, arch); err != nil {
+		return err
 	}
+	// }
 
 	ret := make(chan error)
 	log.Trace().Str(zerolog.CallerFieldName, "ArchiveController.Process").Msg("Queueing message")
@@ -189,47 +196,103 @@ func (p *ArchiveController) Process(arch *Archive) error {
 	}
 
 	log.Trace().Str(zerolog.CallerFieldName, "ArchiveController.Process").Msg("Waiting for return")
-	defer os.Remove(arch.Path.String)
+	defer os.Remove(arch.StoragePath.String) // should this value be re-used in this way for local storage?
 	return <-ret
+}
+
+func (p *ArchiveController) visitArchive(archivePath string, archive *tree.Archive) error { // Visit Archive
+	log.Debug().Str("archivePath", archivePath).Msg("Uploading Archive")
+
+	var remoteArchive Archive
+	// Upsert archive inherent values
+	if err := p.DB.QueryRowx(`INSERT INTO archive (sha256, archive_size, md5, sha1)
+	VALUES ($1, $2, $3, $4)
+	ON CONFLICT (sha256) DO UPDATE SET sha256=EXCLUDED.sha256
+	RETURNING *`,
+		archive.Sha256[:], archive.Size, archive.Md5[:], archive.Sha1[:]).StructScan(&remoteArchive); err != nil {
+		return errors.Wrapf(err, "error upserting archive")
+	}
+
+	// If not valid, or does not exist, move source and update remote
+	if !remoteArchive.StoragePath.Valid || remoteArchive.StoragePath.String == "" { // remote path does not exist or is invalid
+		if err := p.S3Copy(&Archive{
+			Sha256: hash.Sha256(archive.Sha256),
+			StoragePath: sql.NullString{
+				Valid:  false,
+				String: archivePath,
+			},
+		}, &remoteArchive); err != nil {
+			return err
+		}
+
+		// Update archive path entry
+		if _, err := p.DB.Exec("UPDATE archive SET storage_path=$1 WHERE sha256=$2", remoteArchive.StoragePath.String, remoteArchive.Sha256); err != nil {
+			err = errors.Wrapf(err, "error updating archive path")
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *ArchiveController) visitFile(filePath string, f *tree.File) error { // Visit file
+	log.Debug().Str("filePath", filePath).Msg("Uploading File")
+	// Only store if file is a normal file greater than 0 bytes
+	if f.Size < 1 {
+		return nil
+	}
+
+	mimeType, err := mimetype.DetectFile(filePath)
+	if err != nil {
+		err = errors.Wrap(err, "error detecting mimetype")
+		return err
+	}
+
+	r, err := os.Open(filePath)
+	if err != nil {
+		err = errors.Wrapf(err, "error opening file")
+		return err
+	}
+	defer r.Close()
+
+	if err := p.fileStorage.Store(r, &file.FileInfo{
+		Sha256:   file.Sha256(f.Sha256),
+		Sha1:     file.Sha1(f.Sha1),
+		Size:     f.Size,
+		MimeType: mimeType.String(),
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // process is the function the goroutine usse to process the archive.
 // The given archive is extracted, and the resulting files are loaded into the database.
 func (p *ArchiveController) process(arch *Archive, fileName string) error {
-	////
-	// extract archive
-	extDir := "/opt/tk/uploads/ext" // TODO make this non-static
-	archiveExtractDir := filepath.Join(extDir, arch.Sha256.String)
-	if err := os.MkdirAll(archiveExtractDir, 0755); err != nil {
-		err = errors.Wrapf(err, "error making %s", archiveExtractDir)
-		return err
-	}
-	extractor, err := extract.NewAt(arch.Path.String, // arch.Path.String
-		fileName, // Filename
-		archiveExtractDir,
+	log.Debug().Interface("arch", arch).Str(zerolog.CallerFieldName, "ArchiveController.process").Msg("About to process archive")
+	ap, err := processor.NewArchiveProcessor(
+		p.visitArchive,
+		p.visitFile,
 	)
 	if err != nil {
 		return err
 	}
-
-	extractPath, err := extractor.Extract()
+	rootArchive, err := ap.ProcessArchive(arch.StoragePath.String, nil)
 	if err != nil {
 		return err
 	}
-	////
-	defer func(path string) {
-		log.Debug().Str("path", path).Msg("deferred cleaning up extracted directory")
-		if err := os.RemoveAll(path); err != nil {
-			log.Error().Err(err).Str("path", path).Msg("error cleaning up extracted directory")
-		}
-	}(archiveExtractDir)
+	rootArchive.Name = fileName
+	if err := tree.CalculateVerificationCodes(rootArchive); err != nil {
+		return err
+	}
+	log.Debug().Interface("arch", arch).Str(zerolog.CallerFieldName, "ArchiveController.process").Msg("Created archive tree")
 
-	// process files
-	vcodeOne, vcodeTwo, err := p.ProcessFileCollection(arch, extractPath, p.fileStorage)
+	partID, err := sync.SyncTree(p.DB, &part.PartController{DB: p.DB}, rootArchive) // TODO properly obtain part controller
 	if err != nil {
 		return err
 	}
-	log.Info().Bytes("vcodeOne", vcodeOne).Bytes("vcodeTwo", vcodeTwo).Str("sha256", arch.Sha256.String).Msg("ProcessedFileCollection")
+	log.Debug().Interface("arch", arch).Str(zerolog.CallerFieldName, "ArchiveController.process").Str("partID", partID.String()).Msg("Synced archive tree")
 
 	return nil
 }
@@ -241,41 +304,34 @@ func (p *ArchiveController) SyncArchive(db *sqlx.DB, localArchive *Archive) erro
 	var remoteArchive Archive
 
 	// Upsert archive inherent values
-	if err := db.QueryRowx("INSERT INTO archive(name, size, checksum_md5, checksum_sha1, checksum_sha256, extract_status) "+
-		"VALUES($1, $2, $3, $4, $5, 0) "+
-		"ON CONFLICT (name, checksum_sha1) "+
-		"DO UPDATE SET checksum_md5=EXCLUDED.checksum_md5, checksum_sha256=EXCLUDED.checksum_sha256 "+
-		"RETURNING *",
-		localArchive.Name,
-		localArchive.Size.Int64,
-		localArchive.Md5.String,
-		localArchive.Sha1,
-		localArchive.Sha256.String,
-	).StructScan(&remoteArchive); err != nil {
-		err = errors.Wrapf(err, "error scanning remote archive")
-		return err
+	if err := db.QueryRowx(`INSERT INTO archive(sha256, archive_size, md5, sha1) 
+	VALUES ($1, $2, $3, $4) 
+	ON CONFLICT (sha256) DO UPDATE SET sha256=EXCLUDED.sha256
+	RETURNING *`, // Meaningless update is required, if no insert or update is made RETURNING will return nothing
+		localArchive.Sha256, localArchive.Size, localArchive.Md5, localArchive.Sha1).StructScan(&remoteArchive); err != nil {
+		return errors.Wrapf(err, "error scanning remote archive")
 	}
 
 	log.Trace().Interface("remoteArchive", remoteArchive).Interface("localArchive", localArchive).Msg("UPSERTED archive")
 
 	// If not valid, or does not exist, move source and update remote
-	if !remoteArchive.Path.Valid || remoteArchive.Path.String == "" { // remote path does not exist or is invalid
+	if !remoteArchive.StoragePath.Valid || remoteArchive.StoragePath.String == "" { // remote path does not exist or is invalid
 		if err := p.S3Copy(localArchive, &remoteArchive); err != nil {
 			return err
 		}
 
 		// Update archive path entry
-		if _, err := db.Exec("UPDATE archive SET path=$1 WHERE id=$2", remoteArchive.Path.String, remoteArchive.ArchiveID); err != nil {
+		if _, err := db.Exec("UPDATE archive SET storage_path=$1 WHERE sha256=$2", remoteArchive.StoragePath.String, remoteArchive.Sha256); err != nil {
 			err = errors.Wrapf(err, "error updating archive path")
 			return err
 		}
 	}
 
 	// Copy relevant fields from remote to local
-	localArchive.FileCollectionID = remoteArchive.FileCollectionID
-	localArchive.ArchiveID = remoteArchive.ArchiveID
+	localArchive.PartID = remoteArchive.PartID
+	// localArchive.ArchiveID = remoteArchive.ArchiveID // set exists in db
 	localArchive.InsertDate = remoteArchive.InsertDate
-	localArchive.ExtractStatus = remoteArchive.ExtractStatus
+	// localArchive.ExtractStatus = remoteArchive.ExtractStatus
 
 	log.Trace().Interface("archive", localArchive).Msg("Synced Archive")
 
@@ -290,13 +346,13 @@ func (p *ArchiveController) S3Copy(localArchive *Archive, remoteArchive *Archive
 		return err
 	}
 
-	f, err := os.Open(localArchive.Path.String)
+	f, err := os.Open(localArchive.StoragePath.String)
 	if err != nil {
 		return errors.Wrapf(err, "error opening local archive")
 	}
 	defer f.Close()
 
-	key := filepath.Join("archive", localArchive.Sha256.String)
+	key := filepath.Join("archive", hex.EncodeToString(localArchive.Sha256[:]))
 
 	if _, err := client.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(p.bucket),
@@ -306,23 +362,21 @@ func (p *ArchiveController) S3Copy(localArchive *Archive, remoteArchive *Archive
 		return errors.Wrap(err, "error putting local archive")
 	}
 
-	remoteArchive.Path.String = fmt.Sprintf("s3://%s/%s", p.bucket, localArchive.Sha256.String)
-	remoteArchive.Path.Valid = true
+	remoteArchive.StoragePath.String = fmt.Sprintf("s3://%s/%x", p.bucket, localArchive.Sha256[:])
+	remoteArchive.StoragePath.Valid = true
 
 	return nil
 }
 
 type Archive struct {
-	ArchiveID        int64          `db:"id"`
-	FileCollectionID sql.NullInt64  `db:"file_collection_id"`
-	Name             sql.NullString `db:"name"`
-	Path             sql.NullString `db:"path"`
-	Size             sql.NullInt64  `db:"size"`
-	Sha1             sql.NullString `db:"checksum_sha1"`
-	Sha256           sql.NullString `db:"checksum_sha256"`
-	Md5              sql.NullString `db:"checksum_md5"`
-	InsertDate       time.Time      `db:"insert_date"`
-	ExtractStatus    int            `db:"extract_status"`
+	Sha256      hash.Sha256    `db:"sha256"`
+	Size        int64          `db:"archive_size"`
+	PartID      *part.ID       `db:"part_id"`
+	Md5         hash.Md5       `db:"md5"`
+	Sha1        hash.Sha1      `db:"sha1"`
+	InsertDate  time.Time      `db:"insert_date"`
+	StoragePath sql.NullString `db:"storage_path"`
+	Aliases     []string       `db:"names"`
 }
 
 // InitArchive loads an Archive from the local file system.
@@ -387,18 +441,13 @@ func InitArchive(source string, name string) (*Archive, error) {
 	sha256 := sha256Hasher.Sum(nil)
 
 	ret := new(Archive)
-	ret.ArchiveID = -1
-	ret.Name.String = name
-	ret.Name.Valid = true
-	ret.Path.String = source // Leave !Valid as it is not final location
-	ret.Size.Int64 = size
-	ret.Size.Valid = true
-	ret.Md5.String = fmt.Sprintf("%x", md5)
-	ret.Md5.Valid = true
-	ret.Sha1.String = fmt.Sprintf("%x", sha1)
-	ret.Sha1.Valid = true
-	ret.Sha256.String = fmt.Sprintf("%x", sha256)
-	ret.Sha256.Valid = true
+	// ret.ArchiveID = -1
+	ret.Aliases = []string{name}
+	ret.StoragePath.String = source // Leave !Valid as it is not final location
+	ret.Size = size
+	copy(ret.Md5[:], md5)
+	copy(ret.Sha1[:], sha1)
+	copy(ret.Sha256[:], sha256)
 
 	return ret, nil
 }

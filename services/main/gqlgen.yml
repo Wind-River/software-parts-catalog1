@@ -68,7 +68,7 @@ models:
     fields:
       license:
         resolver: true
-  FileCollection:
+  Part:
     fields:
       license:
         resolver: true

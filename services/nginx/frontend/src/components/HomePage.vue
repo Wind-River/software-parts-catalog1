@@ -26,7 +26,7 @@
         striped
         color="primary"
       ></v-progress-linear>
-      <h3 v-if="queryError">{{queryError.networkError? "Network Unavailable": "Search query matched too many results."}}</h3>
+      <h3 v-if="queryError">{{queryError.networkError? "Network Unavailable": "Search Error/ Too Many Results"}}</h3>
       <h3 v-if="data && data.find_archive.length === 0" class="my-4">
         No results found
       </h3>
@@ -34,13 +34,13 @@
   </v-row>
   <v-row v-if="searchStore.results && searchStore.results.length > 0" class="justify-center">
     <v-table class="mx-8" density="compact">
-      <thead class="bg-primary">
+      <thead>
         <tr>
-          <th>{{ searchStore.results.length }}</th>
-          <th>Name</th>
-          <th>License</th>
-          <th>Date</th>
-          <th>SHA256/SHA1</th>
+          <th class="bg-primary">{{ searchStore.results.length }}</th>
+          <th class="bg-primary">Name</th>
+          <th class="bg-primary">License</th>
+          <th class="bg-primary">Date</th>
+          <th class="bg-primary">SHA256/SHA1</th>
         </tr>
       </thead>
       <tbody>
@@ -48,11 +48,11 @@
           v-for="(row, index) in searchStore.results"
           :key="index"
           style="cursor: pointer"
-          @click="redirect(row.archive.file_collection_id)"
+          @click="redirect(row.archive.part_id)"
         >
           <td>{{ index + 1 }}</td>
           <td>{{ row.archive.name }}</td>
-          <td>{{ row.archive.file_collection.license? row.archive.file_collection.license.name : "" }}</td>
+          <td>{{ row.archive.part.license? row.archive.part.license : "" }}</td>
           <td>
             {{ new Date(row.archive.insert_date).toLocaleDateString() }}
           </td>
@@ -80,22 +80,22 @@ const searchQuery: Ref<string> = ref("")
 const router = useRouter()
 const searchStore = useSearchStore()
 
+//Query to retrieve parts from catalog based on user search input
 const result = useQuery({
   query: `
   query($searchQuery: String!){
   find_archive(query: $searchQuery, method: "fast"){
     archive{
-      id
+      sha256
+      Size
+      md5
+      sha1
       name
       insert_date
-      sha256
-      sha1
-      extract_status
-      file_collection_id
-      file_collection{
-        license{
-          name
-        }
+      part_id
+      part{
+        license
+        automation_license
       }
     }
     distance
@@ -109,6 +109,7 @@ const data = result.data
 const fetching = result.fetching
 const queryError = result.error
 
+//Applies rules to search function
 async function search() {
   if (searchQueryInput.value.length > 1) {
     searchQuery.value = searchQueryInput.value
@@ -119,7 +120,8 @@ async function search() {
   } else return
 }
 
-function redirect(id: number): void {
+//Redirects browser to package detail page for selected part
+function redirect(id: string): void {
   router.push({
     name: "Package Detail",
     params: { id: id },

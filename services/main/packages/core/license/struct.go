@@ -11,86 +11,50 @@
 package license
 
 import (
-	"database/sql"
 	"wrs/tk/packages/core/archive"
-	"wrs/tk/packages/core/file_collection"
+	"wrs/tk/packages/core/part"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
 
 type License struct {
-	LicenseID int64  `json:"license_id" db:"id"`
-	Name      string `json:"license_name" db:"expression"`
-	GroupID   int64  `json:"group_id,omitempty"`
-	Group     string `json:"group,omitempty"`
+	Name string `json:"license_name" db:"expression"`
 }
 
 type LicenseController struct {
-	DB                       *sqlx.DB
-	FileCollectionController file_collection.FileCollectionController
-	ArchiveController        *archive.ArchiveController
+	DB                *sqlx.DB
+	PartController    part.PartController
+	ArchiveController *archive.ArchiveController
 }
 
-func (controller LicenseController) GetByID(licenseID int64) (*License, error) {
+// TODO should this be removed entirely?
+func (controller LicenseController) GetByLicenseExpression(expression string) (*License, error) {
 	var ret License
-	if err := controller.DB.QueryRowx("SELECT id, expression FROM license_expression WHERE id=$1",
-		licenseID).Scan(&ret.LicenseID, &ret.Name); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
+	ret.Name = expression
 
-		return nil, err
-	}
+	// TODO check that a part has this license?
 
 	return &ret, nil
 }
 
-func (controller LicenseController) GetByGroup(groupID int64) (*License, error) {
-	ret := License{GroupID: groupID}
-	var parentID sql.NullInt64
-
-	if err := controller.DB.QueryRowx("SELECT name, associatedlicense, parent_id FROM group_container WHERE id=$1",
-		groupID).Scan(&ret.Group, &ret.Name, &parentID); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-
-		return nil, err
-	}
-
-	if ret.Name != "" {
-		return &ret, nil
-	}
-
-	if parentID.Valid { // Group has a parent, so check it for a license
-		return controller.GetByGroup(parentID.Int64)
-	}
-
-	return nil, ErrNotFound
-}
-
-func (controller LicenseController) GetByFileCollection(verificationCode []byte, fileCollectionID int64) (*License, error) {
-	container, err := controller.FileCollectionController.GetBy(verificationCode, fileCollectionID)
+func (controller LicenseController) GetByPart(verificationCode []byte, partID *part.ID) (*License, error) {
+	container, err := controller.PartController.GetBy(verificationCode, partID)
 	if err != nil {
-		if err == file_collection.ErrNotFound {
+		if err == part.ErrNotFound {
 			return nil, ErrNotFound
 		}
 
 		return nil, err
 	}
-
-	if container.LicenseID.Valid {
-		return controller.GetByID(container.LicenseID.Int64)
-	}
-	if container.GroupID.Valid {
-		return controller.GetByGroup(container.GroupID.Int64)
+	if container.License.Valid {
+		return controller.GetByLicenseExpression(container.License.String)
 	}
 
 	return nil, ErrNotFound
 }
 
-func (controller LicenseController) GetByArchive(sha256 string, sha1 string, name string) (*License, error) {
+func (controller LicenseController) GetByArchive(sha256 []byte, sha1 []byte, name string) (*License, error) {
 	arch, err := controller.ArchiveController.GetBy(sha256, sha1, name)
 	if err != nil {
 		if err == archive.ErrNotFound {
@@ -100,15 +64,15 @@ func (controller LicenseController) GetByArchive(sha256 string, sha1 string, nam
 		return nil, err
 	}
 
-	if arch.FileCollectionID.Valid {
-		return controller.GetByFileCollection(nil, arch.FileCollectionID.Int64)
+	if arch.PartID != nil {
+		return controller.GetByPart(nil, arch.PartID)
 	}
 
 	return nil, ErrNotFound
 }
 
-func (controller LicenseController) GetByContainer(verificationCode []byte, sha256 string, sha1 string, name string, fileCollectionID int64) (*License, error) {
-	if license, err := controller.GetByFileCollection(verificationCode, fileCollectionID); err == nil {
+func (controller LicenseController) GetByContainer(verificationCode []byte, sha256 []byte, sha1 []byte, name string, partID *part.ID) (*License, error) {
+	if license, err := controller.GetByPart(verificationCode, partID); err == nil {
 		return license, nil
 	} else if err != ErrNotFound {
 		return nil, err

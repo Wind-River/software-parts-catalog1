@@ -7,11 +7,38 @@ type ArchiveDistance struct {
 	Archive  *Archive `json:"archive"`
 }
 
+type Document struct {
+	Title    *string `json:"title"`
+	Document string  `json:"document"`
+}
+
 type License struct {
-	ID        int64   `json:"id"`
-	Name      string  `json:"name"`
-	GroupID   *int64  `json:"group_id"`
-	GroupName *string `json:"group_name"`
+	Name string `json:"name"`
+}
+
+type PartInput struct {
+	ID                         string  `json:"id"`
+	Type                       *string `json:"type"`
+	Name                       *string `json:"name"`
+	Version                    *string `json:"version"`
+	FamilyName                 *string `json:"family_name"`
+	FileVerificationCode       *string `json:"file_verification_code"`
+	License                    *string `json:"license"`
+	LicenseRationale           *string `json:"license_rationale"`
+	LicenseNotice              *string `json:"license_notice"`
+	AutomationLicense          *string `json:"automation_license"`
+	AutomationLicenseRationale *string `json:"automation_license_rationale"`
+	Comprised                  *string `json:"comprised"`
+}
+
+type Profile struct {
+	Key       string      `json:"key"`
+	Documents []*Document `json:"documents"`
+}
+
+type SubPart struct {
+	Path string `json:"path"`
+	Part *Part  `json:"part"`
 }
 
 type UploadedArchive struct {

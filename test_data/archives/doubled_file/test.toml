@@ -1,0 +1,4 @@
+artifact="doubled_file.tar.bz2"
+error_expected=false
+[verification_codes]
+v2="4656433200dfd09e618480bb1d414d06af6306a6a3632419246546338675aaa948e40a3598"

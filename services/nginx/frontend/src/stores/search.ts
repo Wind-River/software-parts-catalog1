@@ -3,32 +3,29 @@ import {ref, Ref} from "vue"
 
 // ## Graphql Schema Definition
 // type Archive {
-//     id: Int64!
-//     file_collection_id: Int64
-//     file_collection: FileCollection
-//     name: String
-//     path: String
-//     size: Int64
-//     sha1: String
-//     sha256: String
+//     sha256: String!
+//     Size: Int64
+//     part_id: UUID
+//     part: Part
 //     md5: String
+//     sha1: String
+//     name: String
 //     insert_date: Time!
-//     extract_status: Int!
 //   }
+
 type SearchResult = {
     archive: {
-        extract_status: number
-        file_collection_id: number
-        file_collection: {
-            license: {
-                name: string
-            }
+        part_id: string
+        part: {
+            license: string
+            automation_license: string
         }
-        id: number
         insert_date: string
         name: string
         sha1: string
         sha256: string
+        Size: number
+        md5: string
     }
     distance: number
 }

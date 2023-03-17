@@ -27,6 +27,7 @@ const items = [
   { text: "Add", link: "/file" },
   { text: "Update", link: "/update" },
   { text: "About", link: "/about" },
+  { text: "Part Lists", link: "/partlists" },
 ]
 provide("version", 1.0)
 </script>

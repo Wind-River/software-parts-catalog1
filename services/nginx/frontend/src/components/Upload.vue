@@ -1,3 +1,4 @@
+<!-- Reusable component for uploading files -->
 <template>
   <v-col class="d-flex flex-column align-center">
     <v-row class="w-100 ma-2">
@@ -53,6 +54,8 @@
 import { Ref, ref } from "vue"
 
 const files: Ref<File[]> = ref([])
+
+// Defines the upload component with message, file type, and progress information
 const props = defineProps<{
   message: string
   type: string
@@ -60,6 +63,7 @@ const props = defineProps<{
   processing: boolean
 }>()
 
+// Emits when the user activates the form
 const emit = defineEmits<{
   (event: "sendFiles", files: File[]): void
 }>()
