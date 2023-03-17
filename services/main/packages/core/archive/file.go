@@ -26,31 +26,14 @@ import (
 )
 
 type File struct {
-	Name        string
-	Path        string
-	Md5         [16]byte // 32
-	Sha1        [20]byte // 40
-	Sha256      [32]byte // 64
-	Size        int64
-	IsRegular   bool
-	IsSymLink   bool
-	IsNamedPipe bool
-}
+	Sha256 [32]byte `db:"sha256"`
+	Size   int64    `db:"file_size"`
+	Md5    [16]byte `db:"md5"`
+	Sha1   [20]byte `db:"sha1"`
 
-func (f File) SymLinkInt() int {
-	if f.IsSymLink {
-		return 1
-	}
+	Aliases []string `db:"names"`
 
-	return 0
-}
-
-func (f File) NamedPipeInt() int {
-	if f.IsNamedPipe {
-		return 1
-	}
-
-	return 0
+	LocalPath string
 }
 
 func NewFile(filePath string) (*File, error) {
@@ -61,11 +44,8 @@ func NewFile(filePath string) (*File, error) {
 	}
 
 	ret := new(File)
-	ret.Name = stat.Name()
-	ret.Path = filePath
-	ret.IsRegular = stat.Mode().IsRegular()
-	ret.IsSymLink = (stat.Mode() & os.ModeSymlink) > 0
-	ret.IsNamedPipe = (stat.Mode() & os.ModeNamedPipe) > 0
+	ret.Aliases = []string{stat.Name()}
+	ret.LocalPath = filePath
 	ret.Size = stat.Size()
 
 	if ret.Size == 0 || !stat.Mode().IsRegular() {
@@ -121,11 +101,11 @@ func NewFile(filePath string) (*File, error) {
 
 func StoreFile(blobStorage blob.Storage, f *File, filePath string) error {
 	// Only store if file is a normal file greater than 0 bytes
-	if !f.IsRegular || f.Size < 1 {
+	if f.Size < 1 {
 		return nil
 	}
 
-	mimeType, err := mimetype.DetectFile(f.Path)
+	mimeType, err := mimetype.DetectFile(f.LocalPath)
 	if err != nil {
 		err = errors.Wrap(err, "error detecting mimetype")
 		return err

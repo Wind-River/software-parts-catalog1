@@ -38,8 +38,8 @@ type Config struct {
 
 type ResolverRoot interface {
 	Archive() ArchiveResolver
-	FileCollection() FileCollectionResolver
 	Mutation() MutationResolver
+	Part() PartResolver
 	Query() QueryResolver
 }
 
@@ -48,17 +48,14 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Archive struct {
-		ExtractStatus    func(childComplexity int) int
-		FileCollection   func(childComplexity int) int
-		FileCollectionID func(childComplexity int) int
-		ID               func(childComplexity int) int
-		InsertDate       func(childComplexity int) int
-		Md5              func(childComplexity int) int
-		Name             func(childComplexity int) int
-		Path             func(childComplexity int) int
-		Sha1             func(childComplexity int) int
-		Sha256           func(childComplexity int) int
-		Size             func(childComplexity int) int
+		InsertDate func(childComplexity int) int
+		Md5        func(childComplexity int) int
+		Name       func(childComplexity int) int
+		Part       func(childComplexity int) int
+		PartID     func(childComplexity int) int
+		Sha1       func(childComplexity int) int
+		Sha256     func(childComplexity int) int
+		Size       func(childComplexity int) int
 	}
 
 	ArchiveDistance struct {
@@ -66,43 +63,75 @@ type ComplexityRoot struct {
 		Distance func(childComplexity int) int
 	}
 
-	FileCollection struct {
-		AnalystID           func(childComplexity int) int
-		Copyright           func(childComplexity int) int
-		FlagExtract         func(childComplexity int) int
-		FlagLicenseExtract  func(childComplexity int) int
-		GroupContainerID    func(childComplexity int) int
-		ID                  func(childComplexity int) int
-		InsertDate          func(childComplexity int) int
-		License             func(childComplexity int) int
-		LicenseExpression   func(childComplexity int) int
-		LicenseID           func(childComplexity int) int
-		LicenseNotice       func(childComplexity int) int
-		LicenseRationale    func(childComplexity int) int
-		VerificationCodeOne func(childComplexity int) int
-		VerificationCodeTwo func(childComplexity int) int
+	Document struct {
+		Document func(childComplexity int) int
+		Title    func(childComplexity int) int
 	}
 
 	License struct {
-		GroupID   func(childComplexity int) int
-		GroupName func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Name      func(childComplexity int) int
+		Name func(childComplexity int) int
 	}
 
 	Mutation struct {
-		UpdateArchive        func(childComplexity int, sha256 string, license *string, licenseRationale *string, familyString *string) int
-		UpdateFileCollection func(childComplexity int, verificationCode string, license *string, licenseRationale *string, familyString *string) int
-		UploadArchive        func(childComplexity int, file graphql.Upload, name *string) int
+		AddPartList    func(childComplexity int, name string, parentID *int64) int
+		AttachDocument func(childComplexity int, id string, key string, title *string, document string) int
+		CreateAlias    func(childComplexity int, id string, alias string) int
+		DeletePartList func(childComplexity int, id int64) int
+		PartHasFile    func(childComplexity int, id string, fileSha256 string, path *string) int
+		PartHasPart    func(childComplexity int, parent string, child string, path string) int
+		UpdateArchive  func(childComplexity int, sha256 string, license *string, licenseRationale *string, familyString *string) int
+		UpdatePart     func(childComplexity int, partInput *model.PartInput) int
+		UpdatePartList func(childComplexity int, id int64, name *string, parts []*string) int
+		UploadArchive  func(childComplexity int, file graphql.Upload, name *string) int
+	}
+
+	Part struct {
+		Aliases                    func(childComplexity int) int
+		AutomationLicense          func(childComplexity int) int
+		AutomationLicenseRationale func(childComplexity int) int
+		Comprised                  func(childComplexity int) int
+		FamilyName                 func(childComplexity int) int
+		FileVerificationCode       func(childComplexity int) int
+		ID                         func(childComplexity int) int
+		License                    func(childComplexity int) int
+		LicenseNotice              func(childComplexity int) int
+		LicenseRationale           func(childComplexity int) int
+		Name                       func(childComplexity int) int
+		Profiles                   func(childComplexity int) int
+		Size                       func(childComplexity int) int
+		SubParts                   func(childComplexity int) int
+		Type                       func(childComplexity int) int
+		Version                    func(childComplexity int) int
+	}
+
+	PartList struct {
+		ID        func(childComplexity int) int
+		Name      func(childComplexity int) int
+		Parent_ID func(childComplexity int) int
+	}
+
+	Profile struct {
+		Documents func(childComplexity int) int
+		Key       func(childComplexity int) int
 	}
 
 	Query struct {
-		Archive        func(childComplexity int, id *int64, sha256 *string, sha1 *string, name *string) int
-		Archives       func(childComplexity int, id *int64, vcode *string) int
-		FileCollection func(childComplexity int, id *int64, sha256 *string, sha1 *string, name *string) int
-		FileCount      func(childComplexity int, id *int64, vcode *string) int
-		FindArchive    func(childComplexity int, query string, method *string) int
-		TestArchive    func(childComplexity int) int
+		Archive       func(childComplexity int, sha256 *string, name *string) int
+		Archives      func(childComplexity int, id *string, vcode *string) int
+		Comprised     func(childComplexity int, id *string) int
+		FileCount     func(childComplexity int, id *string, vcode *string) int
+		FindArchive   func(childComplexity int, query string, method *string) int
+		Part          func(childComplexity int, id *string, fileVerificationCode *string, sha256 *string, sha1 *string, name *string) int
+		Partlist      func(childComplexity int, id *int64, name *string) int
+		PartlistParts func(childComplexity int, id int64) int
+		Partlists     func(childComplexity int, parentID int64) int
+		Profile       func(childComplexity int, id *string, key *string) int
+		TestArchive   func(childComplexity int) int
+	}
+
+	SubPart struct {
+		Part func(childComplexity int) int
+		Path func(childComplexity int) int
 	}
 
 	UploadedArchive struct {
@@ -112,29 +141,51 @@ type ComplexityRoot struct {
 }
 
 type ArchiveResolver interface {
-	FileCollection(ctx context.Context, obj *model.Archive) (*model.FileCollection, error)
-}
-type FileCollectionResolver interface {
-	FlagExtract(ctx context.Context, obj *model.FileCollection) (*bool, error)
-	FlagLicenseExtract(ctx context.Context, obj *model.FileCollection) (*bool, error)
+	Sha256(ctx context.Context, obj *model.Archive) (string, error)
 
-	License(ctx context.Context, obj *model.FileCollection) (*model.License, error)
-
-	VerificationCodeOne(ctx context.Context, obj *model.FileCollection) (*string, error)
-	VerificationCodeTwo(ctx context.Context, obj *model.FileCollection) (*string, error)
+	PartID(ctx context.Context, obj *model.Archive) (*string, error)
+	Part(ctx context.Context, obj *model.Archive) (*model.Part, error)
+	Md5(ctx context.Context, obj *model.Archive) (*string, error)
+	Sha1(ctx context.Context, obj *model.Archive) (*string, error)
 }
 type MutationResolver interface {
+	AddPartList(ctx context.Context, name string, parentID *int64) (*model.PartList, error)
+	DeletePartList(ctx context.Context, id int64) (*model.PartList, error)
 	UploadArchive(ctx context.Context, file graphql.Upload, name *string) (*model.UploadedArchive, error)
 	UpdateArchive(ctx context.Context, sha256 string, license *string, licenseRationale *string, familyString *string) (*model.Archive, error)
-	UpdateFileCollection(ctx context.Context, verificationCode string, license *string, licenseRationale *string, familyString *string) (*model.FileCollection, error)
+	UpdatePartList(ctx context.Context, id int64, name *string, parts []*string) (*model.PartList, error)
+	UpdatePart(ctx context.Context, partInput *model.PartInput) (*model.Part, error)
+	CreateAlias(ctx context.Context, id string, alias string) (string, error)
+	AttachDocument(ctx context.Context, id string, key string, title *string, document string) (bool, error)
+	PartHasPart(ctx context.Context, parent string, child string, path string) (bool, error)
+	PartHasFile(ctx context.Context, id string, fileSha256 string, path *string) (bool, error)
+}
+type PartResolver interface {
+	ID(ctx context.Context, obj *model.Part) (string, error)
+
+	FileVerificationCode(ctx context.Context, obj *model.Part) (*string, error)
+
+	License(ctx context.Context, obj *model.Part) (*string, error)
+	LicenseRationale(ctx context.Context, obj *model.Part) (*string, error)
+
+	AutomationLicenseRationale(ctx context.Context, obj *model.Part) (*string, error)
+	Comprised(ctx context.Context, obj *model.Part) (*string, error)
+	Aliases(ctx context.Context, obj *model.Part) ([]string, error)
+	Profiles(ctx context.Context, obj *model.Part) ([]*model.Profile, error)
+	SubParts(ctx context.Context, obj *model.Part) ([]*model.SubPart, error)
 }
 type QueryResolver interface {
 	TestArchive(ctx context.Context) (*model.Archive, error)
-	Archive(ctx context.Context, id *int64, sha256 *string, sha1 *string, name *string) (*model.Archive, error)
+	Archive(ctx context.Context, sha256 *string, name *string) (*model.Archive, error)
 	FindArchive(ctx context.Context, query string, method *string) ([]*model.ArchiveDistance, error)
-	FileCollection(ctx context.Context, id *int64, sha256 *string, sha1 *string, name *string) (*model.FileCollection, error)
-	Archives(ctx context.Context, id *int64, vcode *string) ([]*model.Archive, error)
-	FileCount(ctx context.Context, id *int64, vcode *string) (int64, error)
+	Partlist(ctx context.Context, id *int64, name *string) (*model.PartList, error)
+	PartlistParts(ctx context.Context, id int64) ([]*model.Part, error)
+	Part(ctx context.Context, id *string, fileVerificationCode *string, sha256 *string, sha1 *string, name *string) (*model.Part, error)
+	Archives(ctx context.Context, id *string, vcode *string) ([]*model.Archive, error)
+	Partlists(ctx context.Context, parentID int64) ([]*model.PartList, error)
+	FileCount(ctx context.Context, id *string, vcode *string) (int64, error)
+	Comprised(ctx context.Context, id *string) ([]*model.Part, error)
+	Profile(ctx context.Context, id *string, key *string) ([]*model.Document, error)
 }
 
 type executableSchema struct {
@@ -151,34 +202,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
-
-	case "Archive.extract_status":
-		if e.complexity.Archive.ExtractStatus == nil {
-			break
-		}
-
-		return e.complexity.Archive.ExtractStatus(childComplexity), true
-
-	case "Archive.file_collection":
-		if e.complexity.Archive.FileCollection == nil {
-			break
-		}
-
-		return e.complexity.Archive.FileCollection(childComplexity), true
-
-	case "Archive.file_collection_id":
-		if e.complexity.Archive.FileCollectionID == nil {
-			break
-		}
-
-		return e.complexity.Archive.FileCollectionID(childComplexity), true
-
-	case "Archive.id":
-		if e.complexity.Archive.ID == nil {
-			break
-		}
-
-		return e.complexity.Archive.ID(childComplexity), true
 
 	case "Archive.insert_date":
 		if e.complexity.Archive.InsertDate == nil {
@@ -201,12 +224,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Archive.Name(childComplexity), true
 
-	case "Archive.path":
-		if e.complexity.Archive.Path == nil {
+	case "Archive.part":
+		if e.complexity.Archive.Part == nil {
 			break
 		}
 
-		return e.complexity.Archive.Path(childComplexity), true
+		return e.complexity.Archive.Part(childComplexity), true
+
+	case "Archive.part_id":
+		if e.complexity.Archive.PartID == nil {
+			break
+		}
+
+		return e.complexity.Archive.PartID(childComplexity), true
 
 	case "Archive.sha1":
 		if e.complexity.Archive.Sha1 == nil {
@@ -222,7 +252,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Archive.Sha256(childComplexity), true
 
-	case "Archive.size":
+	case "Archive.Size":
 		if e.complexity.Archive.Size == nil {
 			break
 		}
@@ -243,124 +273,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ArchiveDistance.Distance(childComplexity), true
 
-	case "FileCollection.analyst_id":
-		if e.complexity.FileCollection.AnalystID == nil {
+	case "Document.document":
+		if e.complexity.Document.Document == nil {
 			break
 		}
 
-		return e.complexity.FileCollection.AnalystID(childComplexity), true
+		return e.complexity.Document.Document(childComplexity), true
 
-	case "FileCollection.copyright":
-		if e.complexity.FileCollection.Copyright == nil {
+	case "Document.title":
+		if e.complexity.Document.Title == nil {
 			break
 		}
 
-		return e.complexity.FileCollection.Copyright(childComplexity), true
-
-	case "FileCollection.flag_extract":
-		if e.complexity.FileCollection.FlagExtract == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.FlagExtract(childComplexity), true
-
-	case "FileCollection.flag_license_extract":
-		if e.complexity.FileCollection.FlagLicenseExtract == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.FlagLicenseExtract(childComplexity), true
-
-	case "FileCollection.group_container_id":
-		if e.complexity.FileCollection.GroupContainerID == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.GroupContainerID(childComplexity), true
-
-	case "FileCollection.id":
-		if e.complexity.FileCollection.ID == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.ID(childComplexity), true
-
-	case "FileCollection.insert_date":
-		if e.complexity.FileCollection.InsertDate == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.InsertDate(childComplexity), true
-
-	case "FileCollection.license":
-		if e.complexity.FileCollection.License == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.License(childComplexity), true
-
-	case "FileCollection.license_expression":
-		if e.complexity.FileCollection.LicenseExpression == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.LicenseExpression(childComplexity), true
-
-	case "FileCollection.license_id":
-		if e.complexity.FileCollection.LicenseID == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.LicenseID(childComplexity), true
-
-	case "FileCollection.license_notice":
-		if e.complexity.FileCollection.LicenseNotice == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.LicenseNotice(childComplexity), true
-
-	case "FileCollection.license_rationale":
-		if e.complexity.FileCollection.LicenseRationale == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.LicenseRationale(childComplexity), true
-
-	case "FileCollection.verification_code_one":
-		if e.complexity.FileCollection.VerificationCodeOne == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.VerificationCodeOne(childComplexity), true
-
-	case "FileCollection.verification_code_two":
-		if e.complexity.FileCollection.VerificationCodeTwo == nil {
-			break
-		}
-
-		return e.complexity.FileCollection.VerificationCodeTwo(childComplexity), true
-
-	case "License.group_id":
-		if e.complexity.License.GroupID == nil {
-			break
-		}
-
-		return e.complexity.License.GroupID(childComplexity), true
-
-	case "License.group_name":
-		if e.complexity.License.GroupName == nil {
-			break
-		}
-
-		return e.complexity.License.GroupName(childComplexity), true
-
-	case "License.id":
-		if e.complexity.License.ID == nil {
-			break
-		}
-
-		return e.complexity.License.ID(childComplexity), true
+		return e.complexity.Document.Title(childComplexity), true
 
 	case "License.name":
 		if e.complexity.License.Name == nil {
@@ -368,6 +293,78 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.License.Name(childComplexity), true
+
+	case "Mutation.addPartList":
+		if e.complexity.Mutation.AddPartList == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_addPartList_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AddPartList(childComplexity, args["name"].(string), args["parent_id"].(*int64)), true
+
+	case "Mutation.attachDocument":
+		if e.complexity.Mutation.AttachDocument == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_attachDocument_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AttachDocument(childComplexity, args["id"].(string), args["key"].(string), args["title"].(*string), args["document"].(string)), true
+
+	case "Mutation.createAlias":
+		if e.complexity.Mutation.CreateAlias == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createAlias_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateAlias(childComplexity, args["id"].(string), args["alias"].(string)), true
+
+	case "Mutation.deletePartList":
+		if e.complexity.Mutation.DeletePartList == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deletePartList_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeletePartList(childComplexity, args["id"].(int64)), true
+
+	case "Mutation.partHasFile":
+		if e.complexity.Mutation.PartHasFile == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_partHasFile_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PartHasFile(childComplexity, args["id"].(string), args["file_sha256"].(string), args["path"].(*string)), true
+
+	case "Mutation.partHasPart":
+		if e.complexity.Mutation.PartHasPart == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_partHasPart_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.PartHasPart(childComplexity, args["parent"].(string), args["child"].(string), args["path"].(string)), true
 
 	case "Mutation.updateArchive":
 		if e.complexity.Mutation.UpdateArchive == nil {
@@ -381,17 +378,29 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateArchive(childComplexity, args["sha256"].(string), args["license"].(*string), args["licenseRationale"].(*string), args["familyString"].(*string)), true
 
-	case "Mutation.updateFileCollection":
-		if e.complexity.Mutation.UpdateFileCollection == nil {
+	case "Mutation.updatePart":
+		if e.complexity.Mutation.UpdatePart == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_updateFileCollection_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_updatePart_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateFileCollection(childComplexity, args["verificationCode"].(string), args["license"].(*string), args["licenseRationale"].(*string), args["familyString"].(*string)), true
+		return e.complexity.Mutation.UpdatePart(childComplexity, args["partInput"].(*model.PartInput)), true
+
+	case "Mutation.updatePartList":
+		if e.complexity.Mutation.UpdatePartList == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updatePartList_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdatePartList(childComplexity, args["id"].(int64), args["name"].(*string), args["parts"].([]*string)), true
 
 	case "Mutation.uploadArchive":
 		if e.complexity.Mutation.UploadArchive == nil {
@@ -405,6 +414,153 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UploadArchive(childComplexity, args["file"].(graphql.Upload), args["name"].(*string)), true
 
+	case "Part.aliases":
+		if e.complexity.Part.Aliases == nil {
+			break
+		}
+
+		return e.complexity.Part.Aliases(childComplexity), true
+
+	case "Part.automation_license":
+		if e.complexity.Part.AutomationLicense == nil {
+			break
+		}
+
+		return e.complexity.Part.AutomationLicense(childComplexity), true
+
+	case "Part.automation_license_rationale":
+		if e.complexity.Part.AutomationLicenseRationale == nil {
+			break
+		}
+
+		return e.complexity.Part.AutomationLicenseRationale(childComplexity), true
+
+	case "Part.comprised":
+		if e.complexity.Part.Comprised == nil {
+			break
+		}
+
+		return e.complexity.Part.Comprised(childComplexity), true
+
+	case "Part.family_name":
+		if e.complexity.Part.FamilyName == nil {
+			break
+		}
+
+		return e.complexity.Part.FamilyName(childComplexity), true
+
+	case "Part.file_verification_code":
+		if e.complexity.Part.FileVerificationCode == nil {
+			break
+		}
+
+		return e.complexity.Part.FileVerificationCode(childComplexity), true
+
+	case "Part.id":
+		if e.complexity.Part.ID == nil {
+			break
+		}
+
+		return e.complexity.Part.ID(childComplexity), true
+
+	case "Part.license":
+		if e.complexity.Part.License == nil {
+			break
+		}
+
+		return e.complexity.Part.License(childComplexity), true
+
+	case "Part.license_notice":
+		if e.complexity.Part.LicenseNotice == nil {
+			break
+		}
+
+		return e.complexity.Part.LicenseNotice(childComplexity), true
+
+	case "Part.license_rationale":
+		if e.complexity.Part.LicenseRationale == nil {
+			break
+		}
+
+		return e.complexity.Part.LicenseRationale(childComplexity), true
+
+	case "Part.name":
+		if e.complexity.Part.Name == nil {
+			break
+		}
+
+		return e.complexity.Part.Name(childComplexity), true
+
+	case "Part.profiles":
+		if e.complexity.Part.Profiles == nil {
+			break
+		}
+
+		return e.complexity.Part.Profiles(childComplexity), true
+
+	case "Part.size":
+		if e.complexity.Part.Size == nil {
+			break
+		}
+
+		return e.complexity.Part.Size(childComplexity), true
+
+	case "Part.sub_parts":
+		if e.complexity.Part.SubParts == nil {
+			break
+		}
+
+		return e.complexity.Part.SubParts(childComplexity), true
+
+	case "Part.type":
+		if e.complexity.Part.Type == nil {
+			break
+		}
+
+		return e.complexity.Part.Type(childComplexity), true
+
+	case "Part.version":
+		if e.complexity.Part.Version == nil {
+			break
+		}
+
+		return e.complexity.Part.Version(childComplexity), true
+
+	case "PartList.id":
+		if e.complexity.PartList.ID == nil {
+			break
+		}
+
+		return e.complexity.PartList.ID(childComplexity), true
+
+	case "PartList.name":
+		if e.complexity.PartList.Name == nil {
+			break
+		}
+
+		return e.complexity.PartList.Name(childComplexity), true
+
+	case "PartList.parent_id":
+		if e.complexity.PartList.Parent_ID == nil {
+			break
+		}
+
+		return e.complexity.PartList.Parent_ID(childComplexity), true
+
+	case "Profile.documents":
+		if e.complexity.Profile.Documents == nil {
+			break
+		}
+
+		return e.complexity.Profile.Documents(childComplexity), true
+
+	case "Profile.key":
+		if e.complexity.Profile.Key == nil {
+			break
+		}
+
+		return e.complexity.Profile.Key(childComplexity), true
+
 	case "Query.archive":
 		if e.complexity.Query.Archive == nil {
 			break
@@ -415,7 +571,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Archive(childComplexity, args["id"].(*int64), args["sha256"].(*string), args["sha1"].(*string), args["name"].(*string)), true
+		return e.complexity.Query.Archive(childComplexity, args["sha256"].(*string), args["name"].(*string)), true
 
 	case "Query.archives":
 		if e.complexity.Query.Archives == nil {
@@ -427,19 +583,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Archives(childComplexity, args["id"].(*int64), args["vcode"].(*string)), true
+		return e.complexity.Query.Archives(childComplexity, args["id"].(*string), args["vcode"].(*string)), true
 
-	case "Query.file_collection":
-		if e.complexity.Query.FileCollection == nil {
+	case "Query.comprised":
+		if e.complexity.Query.Comprised == nil {
 			break
 		}
 
-		args, err := ec.field_Query_file_collection_args(context.TODO(), rawArgs)
+		args, err := ec.field_Query_comprised_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Query.FileCollection(childComplexity, args["id"].(*int64), args["sha256"].(*string), args["sha1"].(*string), args["name"].(*string)), true
+		return e.complexity.Query.Comprised(childComplexity, args["id"].(*string)), true
 
 	case "Query.file_count":
 		if e.complexity.Query.FileCount == nil {
@@ -451,7 +607,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.FileCount(childComplexity, args["id"].(*int64), args["vcode"].(*string)), true
+		return e.complexity.Query.FileCount(childComplexity, args["id"].(*string), args["vcode"].(*string)), true
 
 	case "Query.find_archive":
 		if e.complexity.Query.FindArchive == nil {
@@ -465,12 +621,86 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.FindArchive(childComplexity, args["query"].(string), args["method"].(*string)), true
 
+	case "Query.part":
+		if e.complexity.Query.Part == nil {
+			break
+		}
+
+		args, err := ec.field_Query_part_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Part(childComplexity, args["id"].(*string), args["file_verification_code"].(*string), args["sha256"].(*string), args["sha1"].(*string), args["name"].(*string)), true
+
+	case "Query.partlist":
+		if e.complexity.Query.Partlist == nil {
+			break
+		}
+
+		args, err := ec.field_Query_partlist_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Partlist(childComplexity, args["id"].(*int64), args["name"].(*string)), true
+
+	case "Query.partlist_parts":
+		if e.complexity.Query.PartlistParts == nil {
+			break
+		}
+
+		args, err := ec.field_Query_partlist_parts_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.PartlistParts(childComplexity, args["id"].(int64)), true
+
+	case "Query.partlists":
+		if e.complexity.Query.Partlists == nil {
+			break
+		}
+
+		args, err := ec.field_Query_partlists_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Partlists(childComplexity, args["parent_id"].(int64)), true
+
+	case "Query.profile":
+		if e.complexity.Query.Profile == nil {
+			break
+		}
+
+		args, err := ec.field_Query_profile_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Profile(childComplexity, args["id"].(*string), args["key"].(*string)), true
+
 	case "Query.test_archive":
 		if e.complexity.Query.TestArchive == nil {
 			break
 		}
 
 		return e.complexity.Query.TestArchive(childComplexity), true
+
+	case "SubPart.part":
+		if e.complexity.SubPart.Part == nil {
+			break
+		}
+
+		return e.complexity.SubPart.Part(childComplexity), true
+
+	case "SubPart.path":
+		if e.complexity.SubPart.Path == nil {
+			break
+		}
+
+		return e.complexity.SubPart.Path(childComplexity), true
 
 	case "UploadedArchive.archive":
 		if e.complexity.UploadedArchive.Archive == nil {
@@ -493,7 +723,9 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e}
-	inputUnmarshalMap := graphql.BuildUnmarshalerMap()
+	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputPartInput,
+	)
 	first := true
 
 	switch rc.Operation.Operation {
@@ -559,36 +791,62 @@ var sources = []*ast.Source{
 
 type Query {
   test_archive: Archive!
-  archive(id: Int64, sha256: String, sha1: String, name: String): Archive
+  archive(sha256: String, name: String): Archive
   find_archive(query: String!, method: String): [ArchiveDistance!]!
-  file_collection(id: Int64, sha256: String, sha1: String, name: String): FileCollection
-  archives(id: Int64, vcode: String): [Archive!]!
-  file_count(id: Int64, vcode: String): Int64!
+  partlist(id: Int64, name: String): PartList
+  partlist_parts(id: Int64!): [Part]!
+  part(id: UUID, file_verification_code: String, sha256: String, sha1: String, name: String): Part
+  archives(id: UUID, vcode: String): [Archive!]!
+  partlists(parent_id: Int64!): [PartList]!
+  file_count(id: UUID, vcode: String): Int64!
+  comprised(id: UUID): [Part!]!
+  profile(id: UUID, key: String): [Document!]
 }
 
 scalar Upload
 
+input PartInput {
+  id: UUID!
+  type: String
+  name: String
+  version: String
+  family_name: String
+  file_verification_code: String
+  license: String
+  license_rationale: String
+  license_notice: String
+  automation_license: String
+  automation_license_rationale: String
+  comprised: UUID
+}
+
 type Mutation {
+  addPartList(name: String!, parent_id: Int64): PartList!
+  deletePartList(id: Int64!): PartList!
   uploadArchive(file: Upload!, name: String): UploadedArchive!
   updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
-  updateFileCollection(verificationCode: String!, license: String, licenseRationale: String, familyString: String): FileCollection
+  updatePartList(id: Int64!, name: String, parts: [UUID]): PartList!
+  updatePart(partInput: PartInput): Part
+  createAlias(id: UUID!, alias: String!): UUID!
+  attachDocument(id: UUID!, key: String!, title: String, document: JSON!): Boolean!
+  partHasPart(parent: UUID!, child: UUID!, path: String!): Boolean!
+  partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
 }
 
 scalar Int64
 scalar Time
+scalar UUID
+scalar JSON
 
 type Archive {
-  id: Int64!
-  file_collection_id: Int64
-  file_collection: FileCollection
-  name: String
-  path: String
-  size: Int64
-  sha1: String
-  sha256: String
+  sha256: String!
+  Size: Int64
+  part_id: UUID
+  part: Part
   md5: String
+  sha1: String
+  name: String
   insert_date: Time!
-  extract_status: Int!
 }
 
 type ArchiveDistance {
@@ -596,33 +854,53 @@ type ArchiveDistance {
   archive: Archive!
 }
 
-type FileCollection {
-  id: Int64
-  insert_date: Time
-  group_container_id: Int64
-  flag_extract: Boolean
-  flag_license_extract: Boolean
-  license_id: Int64
-  license: License
-  license_rationale: String
-  analyst_id: Int64
-  license_expression: String
+type SubPart {
+  path: String!
+  part: Part!
+}
+
+type Part {
+  id: UUID!
+  type: String!
+  name: String
+  version: String
+  family_name: String
+  file_verification_code: String
+  size: Int64
+  license: String
+  license_rationale: JSON
   license_notice: String
-  copyright: String
-  verification_code_one: String
-  verification_code_two: String
+  automation_license: String
+  automation_license_rationale: JSON
+  comprised: UUID
+  aliases: [String!]
+  profiles: [Profile!]
+  sub_parts: [SubPart!]
+}
+
+type PartList {
+  id: Int64!
+  name: String!
+  parent_id: Int64
 }
 
 type License {
-  id: Int64!
   name: String!
-  group_id: Int64
-  group_name: String
 }
 
 type UploadedArchive {
   extracted: Boolean!
   archive: Archive
+}
+
+type Profile {
+  key: String!
+  documents: [Document!]!
+}
+
+type Document {
+  title: String
+  document: JSON!
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -630,6 +908,177 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_Mutation_addPartList_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg0
+	var arg1 *int64
+	if tmp, ok := rawArgs["parent_id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parent_id"))
+		arg1, err = ec.unmarshalOInt642ᚖint64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["parent_id"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_attachDocument_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNUUID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["key"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["key"] = arg1
+	var arg2 *string
+	if tmp, ok := rawArgs["title"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
+		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["title"] = arg2
+	var arg3 string
+	if tmp, ok := rawArgs["document"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("document"))
+		arg3, err = ec.unmarshalNJSON2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["document"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createAlias_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNUUID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["alias"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("alias"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["alias"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deletePartList_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int64
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt642int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_partHasFile_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNUUID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["file_sha256"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file_sha256"))
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["file_sha256"] = arg1
+	var arg2 *string
+	if tmp, ok := rawArgs["path"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("path"))
+		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["path"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_partHasPart_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["parent"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parent"))
+		arg0, err = ec.unmarshalNUUID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["parent"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["child"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("child"))
+		arg1, err = ec.unmarshalNUUID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["child"] = arg1
+	var arg2 string
+	if tmp, ok := rawArgs["path"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("path"))
+		arg2, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["path"] = arg2
+	return args, nil
+}
 
 func (ec *executionContext) field_Mutation_updateArchive_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -673,45 +1122,51 @@ func (ec *executionContext) field_Mutation_updateArchive_args(ctx context.Contex
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_updateFileCollection_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_updatePartList_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["verificationCode"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("verificationCode"))
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	var arg0 int64
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt642int64(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["verificationCode"] = arg0
+	args["id"] = arg0
 	var arg1 *string
-	if tmp, ok := rawArgs["license"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license"))
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["license"] = arg1
-	var arg2 *string
-	if tmp, ok := rawArgs["licenseRationale"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("licenseRationale"))
-		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+	args["name"] = arg1
+	var arg2 []*string
+	if tmp, ok := rawArgs["parts"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parts"))
+		arg2, err = ec.unmarshalOUUID2ᚕᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["licenseRationale"] = arg2
-	var arg3 *string
-	if tmp, ok := rawArgs["familyString"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("familyString"))
-		arg3, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+	args["parts"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePart_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *model.PartInput
+	if tmp, ok := rawArgs["partInput"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("partInput"))
+		arg0, err = ec.unmarshalOPartInput2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["familyString"] = arg3
+	args["partInput"] = arg0
 	return args, nil
 }
 
@@ -757,52 +1212,34 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_archive_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *int64
-	if tmp, ok := rawArgs["id"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalOInt642ᚖint64(ctx, tmp)
+	var arg0 *string
+	if tmp, ok := rawArgs["sha256"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha256"))
+		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["id"] = arg0
+	args["sha256"] = arg0
 	var arg1 *string
-	if tmp, ok := rawArgs["sha256"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha256"))
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["sha256"] = arg1
-	var arg2 *string
-	if tmp, ok := rawArgs["sha1"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha1"))
-		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sha1"] = arg2
-	var arg3 *string
-	if tmp, ok := rawArgs["name"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-		arg3, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["name"] = arg3
+	args["name"] = arg1
 	return args, nil
 }
 
 func (ec *executionContext) field_Query_archives_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *int64
+	var arg0 *string
 	if tmp, ok := rawArgs["id"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalOInt642ᚖint64(ctx, tmp)
+		arg0, err = ec.unmarshalOUUID2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -820,55 +1257,28 @@ func (ec *executionContext) field_Query_archives_args(ctx context.Context, rawAr
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_file_collection_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Query_comprised_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *int64
+	var arg0 *string
 	if tmp, ok := rawArgs["id"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalOInt642ᚖint64(ctx, tmp)
+		arg0, err = ec.unmarshalOUUID2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["id"] = arg0
-	var arg1 *string
-	if tmp, ok := rawArgs["sha256"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha256"))
-		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sha256"] = arg1
-	var arg2 *string
-	if tmp, ok := rawArgs["sha1"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha1"))
-		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["sha1"] = arg2
-	var arg3 *string
-	if tmp, ok := rawArgs["name"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-		arg3, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["name"] = arg3
 	return args, nil
 }
 
 func (ec *executionContext) field_Query_file_count_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *int64
+	var arg0 *string
 	if tmp, ok := rawArgs["id"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-		arg0, err = ec.unmarshalOInt642ᚖint64(ctx, tmp)
+		arg0, err = ec.unmarshalOUUID2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -910,6 +1320,135 @@ func (ec *executionContext) field_Query_find_archive_args(ctx context.Context, r
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_part_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalOUUID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["file_verification_code"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file_verification_code"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["file_verification_code"] = arg1
+	var arg2 *string
+	if tmp, ok := rawArgs["sha256"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha256"))
+		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sha256"] = arg2
+	var arg3 *string
+	if tmp, ok := rawArgs["sha1"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sha1"))
+		arg3, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["sha1"] = arg3
+	var arg4 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg4, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg4
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_partlist_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *int64
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalOInt642ᚖint64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_partlist_parts_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int64
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNInt642int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_partlists_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int64
+	if tmp, ok := rawArgs["parent_id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parent_id"))
+		arg0, err = ec.unmarshalNInt642int64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["parent_id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_profile_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalOUUID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["key"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("key"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["key"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field___Type_enumValues_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -948,8 +1487,8 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Archive_id(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_id(ctx, field)
+func (ec *executionContext) _Archive_sha256(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Archive_sha256(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -962,7 +1501,7 @@ func (ec *executionContext) _Archive_id(ctx context.Context, field graphql.Colle
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
+		return ec.resolvers.Archive().Sha256(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -974,12 +1513,53 @@ func (ec *executionContext) _Archive_id(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Archive_sha256(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Archive",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Archive_Size(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Archive_Size(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Size, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
 	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNInt642int64(ctx, field.Selections, res)
+	return ec.marshalOInt642int64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Archive_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Archive_Size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Archive",
 		Field:      field,
@@ -992,8 +1572,8 @@ func (ec *executionContext) fieldContext_Archive_id(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _Archive_file_collection_id(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_file_collection_id(ctx, field)
+func (ec *executionContext) _Archive_part_id(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Archive_part_id(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1006,7 +1586,7 @@ func (ec *executionContext) _Archive_file_collection_id(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.FileCollectionID, nil
+		return ec.resolvers.Archive().PartID(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1015,26 +1595,26 @@ func (ec *executionContext) _Archive_file_collection_id(ctx context.Context, fie
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*int64)
+	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
+	return ec.marshalOUUID2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Archive_file_collection_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Archive_part_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Archive",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
+			return nil, errors.New("field of type UUID does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Archive_file_collection(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_file_collection(ctx, field)
+func (ec *executionContext) _Archive_part(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Archive_part(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1047,7 +1627,7 @@ func (ec *executionContext) _Archive_file_collection(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Archive().FileCollection(rctx, obj)
+		return ec.resolvers.Archive().Part(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1056,12 +1636,12 @@ func (ec *executionContext) _Archive_file_collection(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.FileCollection)
+	res := resTmp.(*model.Part)
 	fc.Result = res
-	return ec.marshalOFileCollection2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐFileCollection(ctx, field.Selections, res)
+	return ec.marshalOPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Archive_file_collection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Archive_part(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Archive",
 		Field:      field,
@@ -1070,35 +1650,121 @@ func (ec *executionContext) fieldContext_Archive_file_collection(ctx context.Con
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_FileCollection_id(ctx, field)
-			case "insert_date":
-				return ec.fieldContext_FileCollection_insert_date(ctx, field)
-			case "group_container_id":
-				return ec.fieldContext_FileCollection_group_container_id(ctx, field)
-			case "flag_extract":
-				return ec.fieldContext_FileCollection_flag_extract(ctx, field)
-			case "flag_license_extract":
-				return ec.fieldContext_FileCollection_flag_license_extract(ctx, field)
-			case "license_id":
-				return ec.fieldContext_FileCollection_license_id(ctx, field)
+				return ec.fieldContext_Part_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Part_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Part_name(ctx, field)
+			case "version":
+				return ec.fieldContext_Part_version(ctx, field)
+			case "family_name":
+				return ec.fieldContext_Part_family_name(ctx, field)
+			case "file_verification_code":
+				return ec.fieldContext_Part_file_verification_code(ctx, field)
+			case "size":
+				return ec.fieldContext_Part_size(ctx, field)
 			case "license":
-				return ec.fieldContext_FileCollection_license(ctx, field)
+				return ec.fieldContext_Part_license(ctx, field)
 			case "license_rationale":
-				return ec.fieldContext_FileCollection_license_rationale(ctx, field)
-			case "analyst_id":
-				return ec.fieldContext_FileCollection_analyst_id(ctx, field)
-			case "license_expression":
-				return ec.fieldContext_FileCollection_license_expression(ctx, field)
+				return ec.fieldContext_Part_license_rationale(ctx, field)
 			case "license_notice":
-				return ec.fieldContext_FileCollection_license_notice(ctx, field)
-			case "copyright":
-				return ec.fieldContext_FileCollection_copyright(ctx, field)
-			case "verification_code_one":
-				return ec.fieldContext_FileCollection_verification_code_one(ctx, field)
-			case "verification_code_two":
-				return ec.fieldContext_FileCollection_verification_code_two(ctx, field)
+				return ec.fieldContext_Part_license_notice(ctx, field)
+			case "automation_license":
+				return ec.fieldContext_Part_automation_license(ctx, field)
+			case "automation_license_rationale":
+				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
+			case "comprised":
+				return ec.fieldContext_Part_comprised(ctx, field)
+			case "aliases":
+				return ec.fieldContext_Part_aliases(ctx, field)
+			case "profiles":
+				return ec.fieldContext_Part_profiles(ctx, field)
+			case "sub_parts":
+				return ec.fieldContext_Part_sub_parts(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type FileCollection", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Archive_md5(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Archive_md5(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Archive().Md5(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Archive_md5(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Archive",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Archive_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Archive_sha1(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Archive().Sha1(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Archive_sha1(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Archive",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1133,211 +1799,6 @@ func (ec *executionContext) _Archive_name(ctx context.Context, field graphql.Col
 }
 
 func (ec *executionContext) fieldContext_Archive_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Archive",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Archive_path(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_path(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Path, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Archive_path(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Archive",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Archive_size(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_size(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Size, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(int64)
-	fc.Result = res
-	return ec.marshalOInt642int64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Archive_size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Archive",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Archive_sha1(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_sha1(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Sha1, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Archive_sha1(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Archive",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Archive_sha256(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_sha256(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Sha256, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Archive_sha256(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Archive",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Archive_md5(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_md5(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Md5, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Archive_md5(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Archive",
 		Field:      field,
@@ -1389,50 +1850,6 @@ func (ec *executionContext) fieldContext_Archive_insert_date(ctx context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Archive_extract_status(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_extract_status(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ExtractStatus, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Archive_extract_status(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Archive",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1521,28 +1938,22 @@ func (ec *executionContext) fieldContext_ArchiveDistance_archive(ctx context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Archive_id(ctx, field)
-			case "file_collection_id":
-				return ec.fieldContext_Archive_file_collection_id(ctx, field)
-			case "file_collection":
-				return ec.fieldContext_Archive_file_collection(ctx, field)
-			case "name":
-				return ec.fieldContext_Archive_name(ctx, field)
-			case "path":
-				return ec.fieldContext_Archive_path(ctx, field)
-			case "size":
-				return ec.fieldContext_Archive_size(ctx, field)
-			case "sha1":
-				return ec.fieldContext_Archive_sha1(ctx, field)
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
+			case "Size":
+				return ec.fieldContext_Archive_Size(ctx, field)
+			case "part_id":
+				return ec.fieldContext_Archive_part_id(ctx, field)
+			case "part":
+				return ec.fieldContext_Archive_part(ctx, field)
 			case "md5":
 				return ec.fieldContext_Archive_md5(ctx, field)
+			case "sha1":
+				return ec.fieldContext_Archive_sha1(ctx, field)
+			case "name":
+				return ec.fieldContext_Archive_name(ctx, field)
 			case "insert_date":
 				return ec.fieldContext_Archive_insert_date(ctx, field)
-			case "extract_status":
-				return ec.fieldContext_Archive_extract_status(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Archive", field.Name)
 		},
@@ -1550,8 +1961,8 @@ func (ec *executionContext) fieldContext_ArchiveDistance_archive(ctx context.Con
 	return fc, nil
 }
 
-func (ec *executionContext) _FileCollection_id(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_id(ctx, field)
+func (ec *executionContext) _Document_title(ctx context.Context, field graphql.CollectedField, obj *model.Document) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Document_title(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1564,509 +1975,7 @@ func (ec *executionContext) _FileCollection_id(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(int64)
-	fc.Result = res
-	return ec.marshalOInt642int64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_insert_date(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_insert_date(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.InsertDate, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(time.Time)
-	fc.Result = res
-	return ec.marshalOTime2timeᚐTime(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_insert_date(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_group_container_id(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_group_container_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.GroupContainerID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int64)
-	fc.Result = res
-	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_group_container_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_flag_extract(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_flag_extract(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FileCollection().FlagExtract(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*bool)
-	fc.Result = res
-	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_flag_extract(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_flag_license_extract(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_flag_license_extract(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FileCollection().FlagLicenseExtract(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*bool)
-	fc.Result = res
-	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_flag_license_extract(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_license_id(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_license_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.LicenseID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int64)
-	fc.Result = res
-	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_license_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_license(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_license(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FileCollection().License(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.License)
-	fc.Result = res
-	return ec.marshalOLicense2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐLicense(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_license(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_License_id(ctx, field)
-			case "name":
-				return ec.fieldContext_License_name(ctx, field)
-			case "group_id":
-				return ec.fieldContext_License_group_id(ctx, field)
-			case "group_name":
-				return ec.fieldContext_License_group_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type License", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_license_rationale(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_license_rationale(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.LicenseRationale, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_license_rationale(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_analyst_id(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_analyst_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.AnalystID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int64)
-	fc.Result = res
-	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_analyst_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_license_expression(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_license_expression(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.LicenseExpression, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_license_expression(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_license_notice(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_license_notice(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.LicenseNotice, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_license_notice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_copyright(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_copyright(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Copyright, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalOString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_copyright(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _FileCollection_verification_code_one(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_verification_code_one(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FileCollection().VerificationCodeOne(rctx, obj)
+		return obj.Title, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2080,12 +1989,12 @@ func (ec *executionContext) _FileCollection_verification_code_one(ctx context.Co
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_FileCollection_verification_code_one(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Document_title(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
+		Object:     "Document",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
@@ -2093,8 +2002,8 @@ func (ec *executionContext) fieldContext_FileCollection_verification_code_one(ct
 	return fc, nil
 }
 
-func (ec *executionContext) _FileCollection_verification_code_two(ctx context.Context, field graphql.CollectedField, obj *model.FileCollection) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_FileCollection_verification_code_two(ctx, field)
+func (ec *executionContext) _Document_document(ctx context.Context, field graphql.CollectedField, obj *model.Document) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Document_document(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2107,48 +2016,7 @@ func (ec *executionContext) _FileCollection_verification_code_two(ctx context.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.FileCollection().VerificationCodeTwo(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_FileCollection_verification_code_two(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "FileCollection",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _License_id(ctx context.Context, field graphql.CollectedField, obj *model.License) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_License_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
+		return obj.Document, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2160,19 +2028,19 @@ func (ec *executionContext) _License_id(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int64)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNInt642int64(ctx, field.Selections, res)
+	return ec.marshalNJSON2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_License_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Document_document(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "License",
+		Object:     "Document",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
+			return nil, errors.New("field of type JSON does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2222,8 +2090,8 @@ func (ec *executionContext) fieldContext_License_name(ctx context.Context, field
 	return fc, nil
 }
 
-func (ec *executionContext) _License_group_id(ctx context.Context, field graphql.CollectedField, obj *model.License) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_License_group_id(ctx, field)
+func (ec *executionContext) _Mutation_addPartList(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_addPartList(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2236,35 +2104,57 @@ func (ec *executionContext) _License_group_id(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.GroupID, nil
+		return ec.resolvers.Mutation().AddPartList(rctx, fc.Args["name"].(string), fc.Args["parent_id"].(*int64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*int64)
+	res := resTmp.(*model.PartList)
 	fc.Result = res
-	return ec.marshalOInt642ᚖint64(ctx, field.Selections, res)
+	return ec.marshalNPartList2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_License_group_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_addPartList(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "License",
+		Object:     "Mutation",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int64 does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PartList_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PartList_name(ctx, field)
+			case "parent_id":
+				return ec.fieldContext_PartList_parent_id(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PartList", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_addPartList_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _License_group_name(ctx context.Context, field graphql.CollectedField, obj *model.License) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_License_group_name(ctx, field)
+func (ec *executionContext) _Mutation_deletePartList(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deletePartList(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2277,29 +2167,51 @@ func (ec *executionContext) _License_group_name(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.GroupName, nil
+		return ec.resolvers.Mutation().DeletePartList(rctx, fc.Args["id"].(int64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*model.PartList)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNPartList2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_License_group_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_deletePartList(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "License",
+		Object:     "Mutation",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PartList_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PartList_name(ctx, field)
+			case "parent_id":
+				return ec.fieldContext_PartList_parent_id(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PartList", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deletePartList_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -2401,28 +2313,22 @@ func (ec *executionContext) fieldContext_Mutation_updateArchive(ctx context.Cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Archive_id(ctx, field)
-			case "file_collection_id":
-				return ec.fieldContext_Archive_file_collection_id(ctx, field)
-			case "file_collection":
-				return ec.fieldContext_Archive_file_collection(ctx, field)
-			case "name":
-				return ec.fieldContext_Archive_name(ctx, field)
-			case "path":
-				return ec.fieldContext_Archive_path(ctx, field)
-			case "size":
-				return ec.fieldContext_Archive_size(ctx, field)
-			case "sha1":
-				return ec.fieldContext_Archive_sha1(ctx, field)
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
+			case "Size":
+				return ec.fieldContext_Archive_Size(ctx, field)
+			case "part_id":
+				return ec.fieldContext_Archive_part_id(ctx, field)
+			case "part":
+				return ec.fieldContext_Archive_part(ctx, field)
 			case "md5":
 				return ec.fieldContext_Archive_md5(ctx, field)
+			case "sha1":
+				return ec.fieldContext_Archive_sha1(ctx, field)
+			case "name":
+				return ec.fieldContext_Archive_name(ctx, field)
 			case "insert_date":
 				return ec.fieldContext_Archive_insert_date(ctx, field)
-			case "extract_status":
-				return ec.fieldContext_Archive_extract_status(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Archive", field.Name)
 		},
@@ -2441,8 +2347,8 @@ func (ec *executionContext) fieldContext_Mutation_updateArchive(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_updateFileCollection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_updateFileCollection(ctx, field)
+func (ec *executionContext) _Mutation_updatePartList(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updatePartList(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2455,21 +2361,24 @@ func (ec *executionContext) _Mutation_updateFileCollection(ctx context.Context, 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateFileCollection(rctx, fc.Args["verificationCode"].(string), fc.Args["license"].(*string), fc.Args["licenseRationale"].(*string), fc.Args["familyString"].(*string))
+		return ec.resolvers.Mutation().UpdatePartList(rctx, fc.Args["id"].(int64), fc.Args["name"].(*string), fc.Args["parts"].([]*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.FileCollection)
+	res := resTmp.(*model.PartList)
 	fc.Result = res
-	return ec.marshalOFileCollection2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐFileCollection(ctx, field.Selections, res)
+	return ec.marshalNPartList2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_updateFileCollection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_updatePartList(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -2478,35 +2387,13 @@ func (ec *executionContext) fieldContext_Mutation_updateFileCollection(ctx conte
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_FileCollection_id(ctx, field)
-			case "insert_date":
-				return ec.fieldContext_FileCollection_insert_date(ctx, field)
-			case "group_container_id":
-				return ec.fieldContext_FileCollection_group_container_id(ctx, field)
-			case "flag_extract":
-				return ec.fieldContext_FileCollection_flag_extract(ctx, field)
-			case "flag_license_extract":
-				return ec.fieldContext_FileCollection_flag_license_extract(ctx, field)
-			case "license_id":
-				return ec.fieldContext_FileCollection_license_id(ctx, field)
-			case "license":
-				return ec.fieldContext_FileCollection_license(ctx, field)
-			case "license_rationale":
-				return ec.fieldContext_FileCollection_license_rationale(ctx, field)
-			case "analyst_id":
-				return ec.fieldContext_FileCollection_analyst_id(ctx, field)
-			case "license_expression":
-				return ec.fieldContext_FileCollection_license_expression(ctx, field)
-			case "license_notice":
-				return ec.fieldContext_FileCollection_license_notice(ctx, field)
-			case "copyright":
-				return ec.fieldContext_FileCollection_copyright(ctx, field)
-			case "verification_code_one":
-				return ec.fieldContext_FileCollection_verification_code_one(ctx, field)
-			case "verification_code_two":
-				return ec.fieldContext_FileCollection_verification_code_two(ctx, field)
+				return ec.fieldContext_PartList_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PartList_name(ctx, field)
+			case "parent_id":
+				return ec.fieldContext_PartList_parent_id(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type FileCollection", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PartList", field.Name)
 		},
 	}
 	defer func() {
@@ -2516,9 +2403,1212 @@ func (ec *executionContext) fieldContext_Mutation_updateFileCollection(ctx conte
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateFileCollection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_updatePartList_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updatePart(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updatePart(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdatePart(rctx, fc.Args["partInput"].(*model.PartInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Part)
+	fc.Result = res
+	return ec.marshalOPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updatePart(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Part_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Part_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Part_name(ctx, field)
+			case "version":
+				return ec.fieldContext_Part_version(ctx, field)
+			case "family_name":
+				return ec.fieldContext_Part_family_name(ctx, field)
+			case "file_verification_code":
+				return ec.fieldContext_Part_file_verification_code(ctx, field)
+			case "size":
+				return ec.fieldContext_Part_size(ctx, field)
+			case "license":
+				return ec.fieldContext_Part_license(ctx, field)
+			case "license_rationale":
+				return ec.fieldContext_Part_license_rationale(ctx, field)
+			case "license_notice":
+				return ec.fieldContext_Part_license_notice(ctx, field)
+			case "automation_license":
+				return ec.fieldContext_Part_automation_license(ctx, field)
+			case "automation_license_rationale":
+				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
+			case "comprised":
+				return ec.fieldContext_Part_comprised(ctx, field)
+			case "aliases":
+				return ec.fieldContext_Part_aliases(ctx, field)
+			case "profiles":
+				return ec.fieldContext_Part_profiles(ctx, field)
+			case "sub_parts":
+				return ec.fieldContext_Part_sub_parts(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updatePart_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createAlias(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createAlias(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateAlias(rctx, fc.Args["id"].(string), fc.Args["alias"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNUUID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createAlias(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createAlias_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_attachDocument(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_attachDocument(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().AttachDocument(rctx, fc.Args["id"].(string), fc.Args["key"].(string), fc.Args["title"].(*string), fc.Args["document"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_attachDocument(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_attachDocument_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_partHasPart(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_partHasPart(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PartHasPart(rctx, fc.Args["parent"].(string), fc.Args["child"].(string), fc.Args["path"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_partHasPart(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_partHasPart_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_partHasFile(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_partHasFile(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().PartHasFile(rctx, fc.Args["id"].(string), fc.Args["file_sha256"].(string), fc.Args["path"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_partHasFile(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_partHasFile_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_id(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().ID(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNUUID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_type(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_type(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_type(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_name(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_version(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_version(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Version, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_version(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_family_name(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_family_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FamilyName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_family_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_file_verification_code(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_file_verification_code(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().FileVerificationCode(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_file_verification_code(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_size(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_size(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Size, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalOInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_license(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_license(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().License(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_license(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_license_rationale(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_license_rationale(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().LicenseRationale(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOJSON2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_license_rationale(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type JSON does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_license_notice(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_license_notice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LicenseNotice, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_license_notice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_automation_license(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_automation_license(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AutomationLicense, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_automation_license(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_automation_license_rationale(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_automation_license_rationale(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().AutomationLicenseRationale(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOJSON2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_automation_license_rationale(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type JSON does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_comprised(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_comprised(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().Comprised(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOUUID2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_comprised(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type UUID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_aliases(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_aliases(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().Aliases(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_aliases(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_profiles(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_profiles(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().Profiles(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Profile)
+	fc.Result = res
+	return ec.marshalOProfile2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐProfileᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_profiles(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "key":
+				return ec.fieldContext_Profile_key(ctx, field)
+			case "documents":
+				return ec.fieldContext_Profile_documents(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Profile", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Part_sub_parts(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Part_sub_parts(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Part().SubParts(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SubPart)
+	fc.Result = res
+	return ec.marshalOSubPart2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐSubPartᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Part_sub_parts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Part",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "path":
+				return ec.fieldContext_SubPart_path(ctx, field)
+			case "part":
+				return ec.fieldContext_SubPart_part(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SubPart", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PartList_id(ctx context.Context, field graphql.CollectedField, obj *model.PartList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PartList_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PartList_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PartList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PartList_name(ctx context.Context, field graphql.CollectedField, obj *model.PartList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PartList_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PartList_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PartList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PartList_parent_id(ctx context.Context, field graphql.CollectedField, obj *model.PartList) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PartList_parent_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Parent_ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalOInt642int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PartList_parent_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PartList",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int64 does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Profile_key(ctx context.Context, field graphql.CollectedField, obj *model.Profile) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Profile_key(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Key, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Profile_key(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Profile",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Profile_documents(ctx context.Context, field graphql.CollectedField, obj *model.Profile) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Profile_documents(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Documents, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Document)
+	fc.Result = res
+	return ec.marshalNDocument2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐDocumentᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Profile_documents(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Profile",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "title":
+				return ec.fieldContext_Document_title(ctx, field)
+			case "document":
+				return ec.fieldContext_Document_document(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Document", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -2562,28 +3652,22 @@ func (ec *executionContext) fieldContext_Query_test_archive(ctx context.Context,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Archive_id(ctx, field)
-			case "file_collection_id":
-				return ec.fieldContext_Archive_file_collection_id(ctx, field)
-			case "file_collection":
-				return ec.fieldContext_Archive_file_collection(ctx, field)
-			case "name":
-				return ec.fieldContext_Archive_name(ctx, field)
-			case "path":
-				return ec.fieldContext_Archive_path(ctx, field)
-			case "size":
-				return ec.fieldContext_Archive_size(ctx, field)
-			case "sha1":
-				return ec.fieldContext_Archive_sha1(ctx, field)
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
+			case "Size":
+				return ec.fieldContext_Archive_Size(ctx, field)
+			case "part_id":
+				return ec.fieldContext_Archive_part_id(ctx, field)
+			case "part":
+				return ec.fieldContext_Archive_part(ctx, field)
 			case "md5":
 				return ec.fieldContext_Archive_md5(ctx, field)
+			case "sha1":
+				return ec.fieldContext_Archive_sha1(ctx, field)
+			case "name":
+				return ec.fieldContext_Archive_name(ctx, field)
 			case "insert_date":
 				return ec.fieldContext_Archive_insert_date(ctx, field)
-			case "extract_status":
-				return ec.fieldContext_Archive_extract_status(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Archive", field.Name)
 		},
@@ -2605,7 +3689,7 @@ func (ec *executionContext) _Query_archive(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Archive(rctx, fc.Args["id"].(*int64), fc.Args["sha256"].(*string), fc.Args["sha1"].(*string), fc.Args["name"].(*string))
+		return ec.resolvers.Query().Archive(rctx, fc.Args["sha256"].(*string), fc.Args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2627,28 +3711,22 @@ func (ec *executionContext) fieldContext_Query_archive(ctx context.Context, fiel
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Archive_id(ctx, field)
-			case "file_collection_id":
-				return ec.fieldContext_Archive_file_collection_id(ctx, field)
-			case "file_collection":
-				return ec.fieldContext_Archive_file_collection(ctx, field)
-			case "name":
-				return ec.fieldContext_Archive_name(ctx, field)
-			case "path":
-				return ec.fieldContext_Archive_path(ctx, field)
-			case "size":
-				return ec.fieldContext_Archive_size(ctx, field)
-			case "sha1":
-				return ec.fieldContext_Archive_sha1(ctx, field)
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
+			case "Size":
+				return ec.fieldContext_Archive_Size(ctx, field)
+			case "part_id":
+				return ec.fieldContext_Archive_part_id(ctx, field)
+			case "part":
+				return ec.fieldContext_Archive_part(ctx, field)
 			case "md5":
 				return ec.fieldContext_Archive_md5(ctx, field)
+			case "sha1":
+				return ec.fieldContext_Archive_sha1(ctx, field)
+			case "name":
+				return ec.fieldContext_Archive_name(ctx, field)
 			case "insert_date":
 				return ec.fieldContext_Archive_insert_date(ctx, field)
-			case "extract_status":
-				return ec.fieldContext_Archive_extract_status(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Archive", field.Name)
 		},
@@ -2728,8 +3806,8 @@ func (ec *executionContext) fieldContext_Query_find_archive(ctx context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_file_collection(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_file_collection(ctx, field)
+func (ec *executionContext) _Query_partlist(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_partlist(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -2742,7 +3820,7 @@ func (ec *executionContext) _Query_file_collection(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().FileCollection(rctx, fc.Args["id"].(*int64), fc.Args["sha256"].(*string), fc.Args["sha1"].(*string), fc.Args["name"].(*string))
+		return ec.resolvers.Query().Partlist(rctx, fc.Args["id"].(*int64), fc.Args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2751,12 +3829,12 @@ func (ec *executionContext) _Query_file_collection(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.FileCollection)
+	res := resTmp.(*model.PartList)
 	fc.Result = res
-	return ec.marshalOFileCollection2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐFileCollection(ctx, field.Selections, res)
+	return ec.marshalOPartList2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_file_collection(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_partlist(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -2765,35 +3843,13 @@ func (ec *executionContext) fieldContext_Query_file_collection(ctx context.Conte
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_FileCollection_id(ctx, field)
-			case "insert_date":
-				return ec.fieldContext_FileCollection_insert_date(ctx, field)
-			case "group_container_id":
-				return ec.fieldContext_FileCollection_group_container_id(ctx, field)
-			case "flag_extract":
-				return ec.fieldContext_FileCollection_flag_extract(ctx, field)
-			case "flag_license_extract":
-				return ec.fieldContext_FileCollection_flag_license_extract(ctx, field)
-			case "license_id":
-				return ec.fieldContext_FileCollection_license_id(ctx, field)
-			case "license":
-				return ec.fieldContext_FileCollection_license(ctx, field)
-			case "license_rationale":
-				return ec.fieldContext_FileCollection_license_rationale(ctx, field)
-			case "analyst_id":
-				return ec.fieldContext_FileCollection_analyst_id(ctx, field)
-			case "license_expression":
-				return ec.fieldContext_FileCollection_license_expression(ctx, field)
-			case "license_notice":
-				return ec.fieldContext_FileCollection_license_notice(ctx, field)
-			case "copyright":
-				return ec.fieldContext_FileCollection_copyright(ctx, field)
-			case "verification_code_one":
-				return ec.fieldContext_FileCollection_verification_code_one(ctx, field)
-			case "verification_code_two":
-				return ec.fieldContext_FileCollection_verification_code_two(ctx, field)
+				return ec.fieldContext_PartList_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PartList_name(ctx, field)
+			case "parent_id":
+				return ec.fieldContext_PartList_parent_id(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type FileCollection", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PartList", field.Name)
 		},
 	}
 	defer func() {
@@ -2803,7 +3859,182 @@ func (ec *executionContext) fieldContext_Query_file_collection(ctx context.Conte
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_file_collection_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_partlist_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_partlist_parts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_partlist_parts(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().PartlistParts(rctx, fc.Args["id"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Part)
+	fc.Result = res
+	return ec.marshalNPart2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_partlist_parts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Part_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Part_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Part_name(ctx, field)
+			case "version":
+				return ec.fieldContext_Part_version(ctx, field)
+			case "family_name":
+				return ec.fieldContext_Part_family_name(ctx, field)
+			case "file_verification_code":
+				return ec.fieldContext_Part_file_verification_code(ctx, field)
+			case "size":
+				return ec.fieldContext_Part_size(ctx, field)
+			case "license":
+				return ec.fieldContext_Part_license(ctx, field)
+			case "license_rationale":
+				return ec.fieldContext_Part_license_rationale(ctx, field)
+			case "license_notice":
+				return ec.fieldContext_Part_license_notice(ctx, field)
+			case "automation_license":
+				return ec.fieldContext_Part_automation_license(ctx, field)
+			case "automation_license_rationale":
+				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
+			case "comprised":
+				return ec.fieldContext_Part_comprised(ctx, field)
+			case "aliases":
+				return ec.fieldContext_Part_aliases(ctx, field)
+			case "profiles":
+				return ec.fieldContext_Part_profiles(ctx, field)
+			case "sub_parts":
+				return ec.fieldContext_Part_sub_parts(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_partlist_parts_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_part(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_part(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Part(rctx, fc.Args["id"].(*string), fc.Args["file_verification_code"].(*string), fc.Args["sha256"].(*string), fc.Args["sha1"].(*string), fc.Args["name"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Part)
+	fc.Result = res
+	return ec.marshalOPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_part(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Part_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Part_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Part_name(ctx, field)
+			case "version":
+				return ec.fieldContext_Part_version(ctx, field)
+			case "family_name":
+				return ec.fieldContext_Part_family_name(ctx, field)
+			case "file_verification_code":
+				return ec.fieldContext_Part_file_verification_code(ctx, field)
+			case "size":
+				return ec.fieldContext_Part_size(ctx, field)
+			case "license":
+				return ec.fieldContext_Part_license(ctx, field)
+			case "license_rationale":
+				return ec.fieldContext_Part_license_rationale(ctx, field)
+			case "license_notice":
+				return ec.fieldContext_Part_license_notice(ctx, field)
+			case "automation_license":
+				return ec.fieldContext_Part_automation_license(ctx, field)
+			case "automation_license_rationale":
+				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
+			case "comprised":
+				return ec.fieldContext_Part_comprised(ctx, field)
+			case "aliases":
+				return ec.fieldContext_Part_aliases(ctx, field)
+			case "profiles":
+				return ec.fieldContext_Part_profiles(ctx, field)
+			case "sub_parts":
+				return ec.fieldContext_Part_sub_parts(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_part_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -2824,7 +4055,7 @@ func (ec *executionContext) _Query_archives(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Archives(rctx, fc.Args["id"].(*int64), fc.Args["vcode"].(*string))
+		return ec.resolvers.Query().Archives(rctx, fc.Args["id"].(*string), fc.Args["vcode"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2849,28 +4080,22 @@ func (ec *executionContext) fieldContext_Query_archives(ctx context.Context, fie
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Archive_id(ctx, field)
-			case "file_collection_id":
-				return ec.fieldContext_Archive_file_collection_id(ctx, field)
-			case "file_collection":
-				return ec.fieldContext_Archive_file_collection(ctx, field)
-			case "name":
-				return ec.fieldContext_Archive_name(ctx, field)
-			case "path":
-				return ec.fieldContext_Archive_path(ctx, field)
-			case "size":
-				return ec.fieldContext_Archive_size(ctx, field)
-			case "sha1":
-				return ec.fieldContext_Archive_sha1(ctx, field)
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
+			case "Size":
+				return ec.fieldContext_Archive_Size(ctx, field)
+			case "part_id":
+				return ec.fieldContext_Archive_part_id(ctx, field)
+			case "part":
+				return ec.fieldContext_Archive_part(ctx, field)
 			case "md5":
 				return ec.fieldContext_Archive_md5(ctx, field)
+			case "sha1":
+				return ec.fieldContext_Archive_sha1(ctx, field)
+			case "name":
+				return ec.fieldContext_Archive_name(ctx, field)
 			case "insert_date":
 				return ec.fieldContext_Archive_insert_date(ctx, field)
-			case "extract_status":
-				return ec.fieldContext_Archive_extract_status(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Archive", field.Name)
 		},
@@ -2883,6 +4108,69 @@ func (ec *executionContext) fieldContext_Query_archives(ctx context.Context, fie
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_archives_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_partlists(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_partlists(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Partlists(rctx, fc.Args["parent_id"].(int64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PartList)
+	fc.Result = res
+	return ec.marshalNPartList2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_partlists(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PartList_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PartList_name(ctx, field)
+			case "parent_id":
+				return ec.fieldContext_PartList_parent_id(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PartList", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_partlists_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -2903,7 +4191,7 @@ func (ec *executionContext) _Query_file_count(ctx context.Context, field graphql
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().FileCount(rctx, fc.Args["id"].(*int64), fc.Args["vcode"].(*string))
+		return ec.resolvers.Query().FileCount(rctx, fc.Args["id"].(*string), fc.Args["vcode"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2938,6 +4226,153 @@ func (ec *executionContext) fieldContext_Query_file_count(ctx context.Context, f
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_file_count_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_comprised(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_comprised(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Comprised(rctx, fc.Args["id"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Part)
+	fc.Result = res
+	return ec.marshalNPart2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_comprised(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Part_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Part_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Part_name(ctx, field)
+			case "version":
+				return ec.fieldContext_Part_version(ctx, field)
+			case "family_name":
+				return ec.fieldContext_Part_family_name(ctx, field)
+			case "file_verification_code":
+				return ec.fieldContext_Part_file_verification_code(ctx, field)
+			case "size":
+				return ec.fieldContext_Part_size(ctx, field)
+			case "license":
+				return ec.fieldContext_Part_license(ctx, field)
+			case "license_rationale":
+				return ec.fieldContext_Part_license_rationale(ctx, field)
+			case "license_notice":
+				return ec.fieldContext_Part_license_notice(ctx, field)
+			case "automation_license":
+				return ec.fieldContext_Part_automation_license(ctx, field)
+			case "automation_license_rationale":
+				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
+			case "comprised":
+				return ec.fieldContext_Part_comprised(ctx, field)
+			case "aliases":
+				return ec.fieldContext_Part_aliases(ctx, field)
+			case "profiles":
+				return ec.fieldContext_Part_profiles(ctx, field)
+			case "sub_parts":
+				return ec.fieldContext_Part_sub_parts(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_comprised_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_profile(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_profile(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Profile(rctx, fc.Args["id"].(*string), fc.Args["key"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Document)
+	fc.Result = res
+	return ec.marshalODocument2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐDocumentᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_profile(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "title":
+				return ec.fieldContext_Document_title(ctx, field)
+			case "document":
+				return ec.fieldContext_Document_document(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Document", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_profile_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -3073,6 +4508,128 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _SubPart_path(ctx context.Context, field graphql.CollectedField, obj *model.SubPart) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SubPart_path(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Path, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SubPart_path(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SubPart",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SubPart_part(ctx context.Context, field graphql.CollectedField, obj *model.SubPart) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SubPart_part(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Part, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Part)
+	fc.Result = res
+	return ec.marshalNPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SubPart_part(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SubPart",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Part_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Part_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Part_name(ctx, field)
+			case "version":
+				return ec.fieldContext_Part_version(ctx, field)
+			case "family_name":
+				return ec.fieldContext_Part_family_name(ctx, field)
+			case "file_verification_code":
+				return ec.fieldContext_Part_file_verification_code(ctx, field)
+			case "size":
+				return ec.fieldContext_Part_size(ctx, field)
+			case "license":
+				return ec.fieldContext_Part_license(ctx, field)
+			case "license_rationale":
+				return ec.fieldContext_Part_license_rationale(ctx, field)
+			case "license_notice":
+				return ec.fieldContext_Part_license_notice(ctx, field)
+			case "automation_license":
+				return ec.fieldContext_Part_automation_license(ctx, field)
+			case "automation_license_rationale":
+				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
+			case "comprised":
+				return ec.fieldContext_Part_comprised(ctx, field)
+			case "aliases":
+				return ec.fieldContext_Part_aliases(ctx, field)
+			case "profiles":
+				return ec.fieldContext_Part_profiles(ctx, field)
+			case "sub_parts":
+				return ec.fieldContext_Part_sub_parts(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UploadedArchive_extracted(ctx context.Context, field graphql.CollectedField, obj *model.UploadedArchive) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_UploadedArchive_extracted(ctx, field)
 	if err != nil {
@@ -3153,28 +4710,22 @@ func (ec *executionContext) fieldContext_UploadedArchive_archive(ctx context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "id":
-				return ec.fieldContext_Archive_id(ctx, field)
-			case "file_collection_id":
-				return ec.fieldContext_Archive_file_collection_id(ctx, field)
-			case "file_collection":
-				return ec.fieldContext_Archive_file_collection(ctx, field)
-			case "name":
-				return ec.fieldContext_Archive_name(ctx, field)
-			case "path":
-				return ec.fieldContext_Archive_path(ctx, field)
-			case "size":
-				return ec.fieldContext_Archive_size(ctx, field)
-			case "sha1":
-				return ec.fieldContext_Archive_sha1(ctx, field)
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
+			case "Size":
+				return ec.fieldContext_Archive_Size(ctx, field)
+			case "part_id":
+				return ec.fieldContext_Archive_part_id(ctx, field)
+			case "part":
+				return ec.fieldContext_Archive_part(ctx, field)
 			case "md5":
 				return ec.fieldContext_Archive_md5(ctx, field)
+			case "sha1":
+				return ec.fieldContext_Archive_sha1(ctx, field)
+			case "name":
+				return ec.fieldContext_Archive_name(ctx, field)
 			case "insert_date":
 				return ec.fieldContext_Archive_insert_date(ctx, field)
-			case "extract_status":
-				return ec.fieldContext_Archive_extract_status(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Archive", field.Name)
 		},
@@ -4955,6 +6506,122 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputPartInput(ctx context.Context, obj interface{}) (model.PartInput, error) {
+	var it model.PartInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "type", "name", "version", "family_name", "file_verification_code", "license", "license_rationale", "license_notice", "automation_license", "automation_license_rationale", "comprised"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalNUUID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "type":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			it.Type, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "version":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("version"))
+			it.Version, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "family_name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("family_name"))
+			it.FamilyName, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "file_verification_code":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("file_verification_code"))
+			it.FileVerificationCode, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "license":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license"))
+			it.License, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "license_rationale":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license_rationale"))
+			it.LicenseRationale, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "license_notice":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license_notice"))
+			it.LicenseNotice, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "automation_license":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("automation_license"))
+			it.AutomationLicense, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "automation_license_rationale":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("automation_license_rationale"))
+			it.AutomationLicenseRationale, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "comprised":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("comprised"))
+			it.Comprised, err = ec.unmarshalOUUID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -4973,18 +6640,7 @@ func (ec *executionContext) _Archive(ctx context.Context, sel ast.SelectionSet, 
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Archive")
-		case "id":
-
-			out.Values[i] = ec._Archive_id(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
-		case "file_collection_id":
-
-			out.Values[i] = ec._Archive_file_collection_id(ctx, field, obj)
-
-		case "file_collection":
+		case "sha256":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -4993,7 +6649,82 @@ func (ec *executionContext) _Archive(ctx context.Context, sel ast.SelectionSet, 
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Archive_file_collection(ctx, field, obj)
+				res = ec._Archive_sha256(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "Size":
+
+			out.Values[i] = ec._Archive_Size(ctx, field, obj)
+
+		case "part_id":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Archive_part_id(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "part":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Archive_part(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "md5":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Archive_md5(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "sha1":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Archive_sha1(ctx, field, obj)
 				return res
 			}
 
@@ -5005,36 +6736,9 @@ func (ec *executionContext) _Archive(ctx context.Context, sel ast.SelectionSet, 
 
 			out.Values[i] = ec._Archive_name(ctx, field, obj)
 
-		case "path":
-
-			out.Values[i] = ec._Archive_path(ctx, field, obj)
-
-		case "size":
-
-			out.Values[i] = ec._Archive_size(ctx, field, obj)
-
-		case "sha1":
-
-			out.Values[i] = ec._Archive_sha1(ctx, field, obj)
-
-		case "sha256":
-
-			out.Values[i] = ec._Archive_sha256(ctx, field, obj)
-
-		case "md5":
-
-			out.Values[i] = ec._Archive_md5(ctx, field, obj)
-
 		case "insert_date":
 
 			out.Values[i] = ec._Archive_insert_date(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
-		case "extract_status":
-
-			out.Values[i] = ec._Archive_extract_status(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
@@ -5085,137 +6789,27 @@ func (ec *executionContext) _ArchiveDistance(ctx context.Context, sel ast.Select
 	return out
 }
 
-var fileCollectionImplementors = []string{"FileCollection"}
+var documentImplementors = []string{"Document"}
 
-func (ec *executionContext) _FileCollection(ctx context.Context, sel ast.SelectionSet, obj *model.FileCollection) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, fileCollectionImplementors)
+func (ec *executionContext) _Document(ctx context.Context, sel ast.SelectionSet, obj *model.Document) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, documentImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("FileCollection")
-		case "id":
+			out.Values[i] = graphql.MarshalString("Document")
+		case "title":
 
-			out.Values[i] = ec._FileCollection_id(ctx, field, obj)
+			out.Values[i] = ec._Document_title(ctx, field, obj)
 
-		case "insert_date":
+		case "document":
 
-			out.Values[i] = ec._FileCollection_insert_date(ctx, field, obj)
+			out.Values[i] = ec._Document_document(ctx, field, obj)
 
-		case "group_container_id":
-
-			out.Values[i] = ec._FileCollection_group_container_id(ctx, field, obj)
-
-		case "flag_extract":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FileCollection_flag_extract(ctx, field, obj)
-				return res
+			if out.Values[i] == graphql.Null {
+				invalids++
 			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "flag_license_extract":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FileCollection_flag_license_extract(ctx, field, obj)
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "license_id":
-
-			out.Values[i] = ec._FileCollection_license_id(ctx, field, obj)
-
-		case "license":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FileCollection_license(ctx, field, obj)
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "license_rationale":
-
-			out.Values[i] = ec._FileCollection_license_rationale(ctx, field, obj)
-
-		case "analyst_id":
-
-			out.Values[i] = ec._FileCollection_analyst_id(ctx, field, obj)
-
-		case "license_expression":
-
-			out.Values[i] = ec._FileCollection_license_expression(ctx, field, obj)
-
-		case "license_notice":
-
-			out.Values[i] = ec._FileCollection_license_notice(ctx, field, obj)
-
-		case "copyright":
-
-			out.Values[i] = ec._FileCollection_copyright(ctx, field, obj)
-
-		case "verification_code_one":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FileCollection_verification_code_one(ctx, field, obj)
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
-		case "verification_code_two":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FileCollection_verification_code_two(ctx, field, obj)
-				return res
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return innerFunc(ctx)
-
-			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5237,13 +6831,6 @@ func (ec *executionContext) _License(ctx context.Context, sel ast.SelectionSet, 
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("License")
-		case "id":
-
-			out.Values[i] = ec._License_id(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		case "name":
 
 			out.Values[i] = ec._License_name(ctx, field, obj)
@@ -5251,14 +6838,6 @@ func (ec *executionContext) _License(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "group_id":
-
-			out.Values[i] = ec._License_group_id(ctx, field, obj)
-
-		case "group_name":
-
-			out.Values[i] = ec._License_group_name(ctx, field, obj)
-
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5289,6 +6868,24 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "addPartList":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_addPartList(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deletePartList":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deletePartList(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "uploadArchive":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -5304,12 +6901,339 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 				return ec._Mutation_updateArchive(ctx, field)
 			})
 
-		case "updateFileCollection":
+		case "updatePartList":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateFileCollection(ctx, field)
+				return ec._Mutation_updatePartList(ctx, field)
 			})
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updatePart":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updatePart(ctx, field)
+			})
+
+		case "createAlias":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createAlias(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "attachDocument":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_attachDocument(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "partHasPart":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_partHasPart(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "partHasFile":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_partHasFile(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var partImplementors = []string{"Part"}
+
+func (ec *executionContext) _Part(ctx context.Context, sel ast.SelectionSet, obj *model.Part) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, partImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Part")
+		case "id":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_id(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "type":
+
+			out.Values[i] = ec._Part_type(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "name":
+
+			out.Values[i] = ec._Part_name(ctx, field, obj)
+
+		case "version":
+
+			out.Values[i] = ec._Part_version(ctx, field, obj)
+
+		case "family_name":
+
+			out.Values[i] = ec._Part_family_name(ctx, field, obj)
+
+		case "file_verification_code":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_file_verification_code(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "size":
+
+			out.Values[i] = ec._Part_size(ctx, field, obj)
+
+		case "license":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_license(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "license_rationale":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_license_rationale(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "license_notice":
+
+			out.Values[i] = ec._Part_license_notice(ctx, field, obj)
+
+		case "automation_license":
+
+			out.Values[i] = ec._Part_automation_license(ctx, field, obj)
+
+		case "automation_license_rationale":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_automation_license_rationale(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "comprised":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_comprised(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "aliases":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_aliases(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "profiles":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_profiles(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		case "sub_parts":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Part_sub_parts(ctx, field, obj)
+				return res
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var partListImplementors = []string{"PartList"}
+
+func (ec *executionContext) _PartList(ctx context.Context, sel ast.SelectionSet, obj *model.PartList) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, partListImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PartList")
+		case "id":
+
+			out.Values[i] = ec._PartList_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "name":
+
+			out.Values[i] = ec._PartList_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "parent_id":
+
+			out.Values[i] = ec._PartList_parent_id(ctx, field, obj)
+
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var profileImplementors = []string{"Profile"}
+
+func (ec *executionContext) _Profile(ctx context.Context, sel ast.SelectionSet, obj *model.Profile) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, profileImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Profile")
+		case "key":
+
+			out.Values[i] = ec._Profile_key(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "documents":
+
+			out.Values[i] = ec._Profile_documents(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5406,7 +7330,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
-		case "file_collection":
+		case "partlist":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -5415,7 +7339,50 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_file_collection(ctx, field)
+				res = ec._Query_partlist(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "partlist_parts":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_partlist_parts(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "part":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_part(ctx, field)
 				return res
 			}
 
@@ -5436,6 +7403,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_archives(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "partlists":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_partlists(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -5472,6 +7462,49 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
+		case "comprised":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_comprised(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "profile":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_profile(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "__type":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -5484,6 +7517,41 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				return ec._Query___schema(ctx, field)
 			})
 
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var subPartImplementors = []string{"SubPart"}
+
+func (ec *executionContext) _SubPart(ctx context.Context, sel ast.SelectionSet, obj *model.SubPart) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, subPartImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SubPart")
+		case "path":
+
+			out.Values[i] = ec._SubPart_path(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "part":
+
+			out.Values[i] = ec._SubPart_part(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -5972,19 +8040,58 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
-	res, err := graphql.UnmarshalInt(v)
-	return res, graphql.ErrorOnPath(ctx, err)
+func (ec *executionContext) marshalNDocument2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐDocumentᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Document) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDocument2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐDocument(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
-func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
-	res := graphql.MarshalInt(v)
-	if res == graphql.Null {
+func (ec *executionContext) marshalNDocument2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐDocument(ctx context.Context, sel ast.SelectionSet, v *model.Document) graphql.Marshaler {
+	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
+		return graphql.Null
 	}
-	return res
+	return ec._Document(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNInt642int64(ctx context.Context, v interface{}) (int64, error) {
@@ -6002,6 +8109,175 @@ func (ec *executionContext) marshalNInt642int64(ctx context.Context, sel ast.Sel
 	return res
 }
 
+func (ec *executionContext) unmarshalNJSON2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNJSON2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) marshalNPart2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx context.Context, sel ast.SelectionSet, v []*model.Part) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPart2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Part) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx context.Context, sel ast.SelectionSet, v *model.Part) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Part(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPartList2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx context.Context, sel ast.SelectionSet, v model.PartList) graphql.Marshaler {
+	return ec._PartList(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPartList2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx context.Context, sel ast.SelectionSet, v []*model.PartList) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOPartList2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPartList2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx context.Context, sel ast.SelectionSet, v *model.PartList) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PartList(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNProfile2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐProfile(ctx context.Context, sel ast.SelectionSet, v *model.Profile) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Profile(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -6017,6 +8293,16 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
+func (ec *executionContext) marshalNSubPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐSubPart(ctx context.Context, sel ast.SelectionSet, v *model.SubPart) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SubPart(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
 	res, err := graphql.UnmarshalTime(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -6024,6 +8310,21 @@ func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v in
 
 func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
 	res := graphql.MarshalTime(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNUUID2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUUID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -6347,11 +8648,51 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return res
 }
 
-func (ec *executionContext) marshalOFileCollection2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐFileCollection(ctx context.Context, sel ast.SelectionSet, v *model.FileCollection) graphql.Marshaler {
+func (ec *executionContext) marshalODocument2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐDocumentᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Document) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._FileCollection(ctx, sel, v)
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDocument2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐDocument(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOInt642int64(ctx context.Context, v interface{}) (int64, error) {
@@ -6380,11 +8721,89 @@ func (ec *executionContext) marshalOInt642ᚖint64(ctx context.Context, sel ast.
 	return res
 }
 
-func (ec *executionContext) marshalOLicense2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐLicense(ctx context.Context, sel ast.SelectionSet, v *model.License) graphql.Marshaler {
+func (ec *executionContext) unmarshalOJSON2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalString(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOJSON2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._License(ctx, sel, v)
+	res := graphql.MarshalString(*v)
+	return res
+}
+
+func (ec *executionContext) marshalOPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx context.Context, sel ast.SelectionSet, v *model.Part) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._Part(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOPartInput2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartInput(ctx context.Context, v interface{}) (*model.PartInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputPartInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOPartList2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPartList(ctx context.Context, sel ast.SelectionSet, v *model.PartList) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._PartList(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOProfile2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐProfileᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Profile) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNProfile2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐProfile(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
@@ -6395,6 +8814,44 @@ func (ec *executionContext) unmarshalOString2string(ctx context.Context, v inter
 func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
 	res := graphql.MarshalString(v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
@@ -6413,13 +8870,98 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return res
 }
 
-func (ec *executionContext) unmarshalOTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {
-	res, err := graphql.UnmarshalTime(v)
-	return res, graphql.ErrorOnPath(ctx, err)
+func (ec *executionContext) marshalOSubPart2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐSubPartᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SubPart) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSubPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐSubPart(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
-func (ec *executionContext) marshalOTime2timeᚐTime(ctx context.Context, sel ast.SelectionSet, v time.Time) graphql.Marshaler {
-	res := graphql.MarshalTime(v)
+func (ec *executionContext) unmarshalOUUID2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOUUID2ᚖstring(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOUUID2ᚕᚖstring(ctx context.Context, sel ast.SelectionSet, v []*string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOUUID2ᚖstring(ctx, sel, v[i])
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOUUID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalString(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOUUID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalString(*v)
 	return res
 }
 

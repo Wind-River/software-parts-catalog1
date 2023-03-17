@@ -34,8 +34,8 @@ import (
 	"encoding/hex"
 
 	"wrs/tk/packages/core/archive"
-	"wrs/tk/packages/core/file_collection"
 	"wrs/tk/packages/core/license"
+	"wrs/tk/packages/core/part"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -62,14 +62,14 @@ type UploadController struct {
 	CSVTransformer csvconv.CSVTransformer
 	db             *sqlx.DB
 
-	archiveController        *archive.ArchiveController
-	fileCollectionController file_collection.FileCollectionController
-	licenseController        license.LicenseController
+	archiveController *archive.ArchiveController
+	partController    part.PartController
+	licenseController license.LicenseController
 }
 
 func NewUploadController(uploadDirectory string, blobStorage blob.Storage, db *sqlx.DB,
 	archiveController *archive.ArchiveController,
-	fileCollectionController file_collection.FileCollectionController,
+	partController part.PartController,
 	licenseController license.LicenseController) (*UploadController, error) {
 	var ret UploadController
 
@@ -77,7 +77,7 @@ func NewUploadController(uploadDirectory string, blobStorage blob.Storage, db *s
 	ret.CSVTransformer = csvconv.CSVTransformer{ImplicitConversion: true}
 	ret.db = db
 	ret.archiveController = archiveController
-	ret.fileCollectionController = fileCollectionController
+	ret.partController = partController
 	ret.licenseController = licenseController
 
 	if uploadDirectory != "" {
@@ -312,22 +312,22 @@ func (controller *UploadController) HandleFile(file multipart.File, header *mult
 
 // LookupArchive attempts to lookup the archive and file collection of an upload.
 // If the upload is unknown, it returns a Initialized Archive.
-func (controller *UploadController) LookupArchive(u Upload) (*archive.Archive, *file_collection.FileCollection, error) {
+func (controller *UploadController) LookupArchive(u Upload) (*archive.Archive, *part.Part, error) {
 	u.Filepath = filepath.Join(controller.tmpDirectory, u.Uploadname)
 
-	shaTwo, err := sha256.Sha256OfFilePath(u.Filepath)
+	shaTwo, err := sha256.RawSha256(u.Filepath)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	arch, err := controller.archiveController.GetBySha256(shaTwo)
+	arch, err := controller.archiveController.GetBySha256(shaTwo[:])
 	if arch == nil { // Manually collect additional fields
 		arch, _ = archive.InitArchive(u.Filepath, u.Filename)
 	} else {
 		log.Debug().
 			Str(zerolog.CallerFieldName, "*UploadController.LookupArchive()").
 			Interface("arch", arch).
-			Str("sha256", shaTwo).
+			Bytes("sha256", shaTwo[:]).
 			Msg("received from archiveController.GetBySha256")
 	}
 	if err == archive.ErrNotFound {
@@ -336,21 +336,21 @@ func (controller *UploadController) LookupArchive(u Upload) (*archive.Archive, *
 		return arch, nil, err
 	}
 
-	if !arch.FileCollectionID.Valid {
+	if arch.PartID == nil {
 		return arch, nil, nil
 	}
 
-	fileCollection, err := controller.fileCollectionController.GetByID(arch.FileCollectionID.Int64)
-	if err == file_collection.ErrNotFound {
+	p, err := controller.partController.GetByID(*arch.PartID)
+	if err == part.ErrNotFound {
 		return arch, nil, nil
 	} else if err != nil {
 		return arch, nil, err
 	}
 
-	return arch, fileCollection, nil
+	return arch, p, nil
 }
 
-func (controller *UploadController) ProcessArchive(u Upload, arch *archive.Archive) (*archive.Archive, *file_collection.FileCollection, error) {
+func (controller *UploadController) ProcessArchive(u Upload, arch *archive.Archive) (*archive.Archive, *part.Part, error) {
 	u.Filepath = filepath.Join(controller.tmpDirectory, u.Uploadname)
 
 	log.Debug().Str(zerolog.CallerFieldName, "*UploadController.ProcessArchive()").Interface("u", u).Interface("arch", arch).Send()
@@ -362,20 +362,20 @@ func (controller *UploadController) ProcessArchive(u Upload, arch *archive.Archi
 			return arch, nil, err
 		}
 	} else {
-		arch.Path.String = u.Filepath
-		arch.Path.Valid = true
+		arch.StoragePath.String = u.Filepath
+		arch.StoragePath.Valid = true
 	}
 
-	if !arch.FileCollectionID.Valid { // archive needs to be processed
+	if arch.PartID == nil { // archive needs to be processed
 		if err := controller.archiveController.Process(arch); err != nil {
 			return arch, nil, err
 		}
 	}
 
-	fileCollection, err := controller.fileCollectionController.GetByID(arch.FileCollectionID.Int64)
+	p, err := controller.partController.GetByID(*arch.PartID)
 	if err != nil {
 		return arch, nil, err
 	}
 
-	return arch, fileCollection, nil
+	return arch, p, nil
 }

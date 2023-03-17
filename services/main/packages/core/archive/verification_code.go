@@ -18,6 +18,7 @@ import (
 )
 
 // processFileCollection catalogs files found at parentDirectory as children of this archive, and recursively processes any sub-packages.
+// if any file sha256s are missing, vcodeTwo will be nil
 func (p *ArchiveController) CalculateArchiveVerificationCode(archiveID int64) (vcodeOne []byte, vcodeTwo []byte, err error) {
 	vcoderOne := code.NewVersionOne().(*code.VersionOneHasher)
 	vcoderTwo := code.NewVersionTwo().(*code.VersionTwoHasher)
@@ -40,14 +41,16 @@ func (p *ArchiveController) CalculateArchiveVerificationCode(archiveID int64) (v
 			return nil, nil, errors.Wrapf(err, "error scanning checksum of files of archive %d", archiveID)
 		}
 
-		if tmpSha1.Valid {
-			if err := vcoderOne.AddSha1Hex(tmpSha1.String); err != nil {
-				return nil, nil, err
-			}
+		if err := vcoderOne.AddSha1Hex(tmpSha1.String); err != nil {
+			return nil, nil, err
 		}
-		if tmpSha256.Valid {
-			if err := vcoderTwo.AddSha256Hex(tmpSha256.String); err != nil {
-				return nil, nil, err
+		if vcoderTwo != nil {
+			if !tmpSha256.Valid {
+				vcoderTwo = nil
+			} else {
+				if err := vcoderTwo.AddSha256Hex(tmpSha256.String); err != nil {
+					return nil, nil, err
+				}
 			}
 		}
 	}

@@ -1,0 +1,4 @@
+artifact="test_bad_archive.tar.bz2"
+error_expected=false
+[verification_codes]
+v2="4656433200b14da359e7b2e6e20858ff4315a89f8127ac46f2c46704a71bd8d24b8bfd2b7e"

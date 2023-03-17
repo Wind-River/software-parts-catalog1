@@ -22,6 +22,11 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("../views/File.vue"),
   },
   {
+    path: "/file/:id",
+    name: "PartListAdd",
+    component: () => import("../views/File.vue")
+  },
+  {
     path: "/update",
     name: "Update",
     component: () => import("../views/Update.vue"),
@@ -31,6 +36,21 @@ const routes: Array<RouteRecordRaw> = [
     name: "Package Detail",
     component: () => import("../views/PackageDetail.vue"),
   },
+  {
+    path: "/partlists",
+    name: "PartLists",
+    component: () => import("../views/PartListBrowser.vue"),
+  },
+  {
+    path: "/partlist/:id",
+    name: "Part List Detail",
+    component: () => import("../views/PartListDetail.vue"),
+  },
+  {
+    path: "/profile/:id/:key",
+    name: "Profile Detail",
+    component: () => import("../views/ProfileDetail.vue")
+  }
 ]
 
 const router = createRouter({

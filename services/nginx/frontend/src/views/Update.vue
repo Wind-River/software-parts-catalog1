@@ -1,4 +1,4 @@
-<!-- Package file upload page -->
+<!-- Part update page -->
 <template>
   <v-container>
     <div class="d-flex flex-column align-center">
@@ -47,6 +47,7 @@ import { useMutation } from "@urql/vue"
 import { Ref, ref } from "vue"
 import Upload from "@/components/Upload.vue"
 
+//Defines the structure of an update csv file
 type UpdateCSV = {
   checksum: string
   copyright: string
@@ -58,14 +59,17 @@ type UpdateCSV = {
   verification_code: string
 }
 
+//Handles csv files and related processing elements
 const uploadedCSV: Ref<UpdateCSV[]> = ref([])
 const processing: Ref<boolean> = ref(false)
 const showDialog: Ref<boolean> = ref(false)
 const dialogMessage: Ref<string> = ref("Uploaded CSV has completed processing.")
 
+//Updates the part record within the catalog
 const updateMutation = useMutation(`
-  mutation($verificationCode: String!, $license: String, $licenseRationale: String){
-    updateFileCollection(verificationCode: $verificationCode, license: $license, licenseRationale: $licenseRationale){
+  mutation($partID: UUID!, $verificationCode: String, $license: String, $licenseRationale: String){
+    updatePart(partID: $partID, verificationCode: $verificationCode, license: $license, licenseRationale: $licenseRationale, 
+    familyString: $familyString){
       verification_code_one
       verification_code_two
       license_expression
@@ -76,6 +80,7 @@ const updateMutation = useMutation(`
 
 const graphqlError = updateMutation.error
 
+//Parses csv file into structure used for update mutations
 function parseCSV(file: File): Promise<UpdateCSV[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -124,6 +129,7 @@ function csvToArray(csvString: string): UpdateCSV[] {
   })
 }
 
+//Function parses csv into processable format and then executes mutations
 async function handleUpload(files: File[]) {
   processing.value = true
   uploadedCSV.value = []

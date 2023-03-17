@@ -1,0 +1,4 @@
+artifact="simple.tar.bz2"
+error_expected=false
+[verification_codes]
+v2="46564332000068d9885483919702f8b4d03523ff02e557d39760c8cade10693eee01bf0d0c"

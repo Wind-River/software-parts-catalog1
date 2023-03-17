@@ -32,6 +32,7 @@
 import router from "@/router"
 import { inject } from "vue"
 
+//Responsible for collection information to be displayed from various sources
 const catalogName: string =
   window.location.href.substring(0, window.location.href.indexOf("/app")) ||
   "windriver.com/spc-prod-1"

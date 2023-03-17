@@ -1,0 +1,4 @@
+artifact="child.tar.bz2"
+error_expected=false
+[verification_codes]
+v2="4656433200466df1af471c6f8230277b47bdfab3f3ca09cac8057d2a6a28b9f93a636dd769"
