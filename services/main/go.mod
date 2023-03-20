@@ -18,6 +18,7 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.1
 	gitlab.devstar.cloud/ip-systems/extract.git v0.2.0
 	gitlab.devstar.cloud/ip-systems/verification-code.git v0.2.1
+	golang.org/x/text v0.3.7
 )
 
 require (
@@ -42,7 +43,6 @@ require (
 	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/sys v0.0.0-20220811171246-fbc7d0a398ab // indirect
-	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

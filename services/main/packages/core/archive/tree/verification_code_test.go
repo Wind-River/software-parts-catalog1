@@ -34,12 +34,13 @@ func MustSha1(hexRepresentation string) [20]byte {
 }
 
 var treeContainerSymlinkError *Archive = &Archive{
-	Sha256: MustSha256("837f0da343583b0995e51de26b6fb848103221b5fdfdd1d742746765042bd5ec"),
-	Size:   920,
-	Md5:    MustMd5("87683b1fb6e6fa1e3de887df15ac5de9"),
-	Sha1:   MustSha1("dbf0265e662276ace37bab2917fee95edde31138"),
-	Name:   "test.tar.bz2",
-
+	ArchiveIdentifiers: ArchiveIdentifiers{
+		Sha256: MustSha256("837f0da343583b0995e51de26b6fb848103221b5fdfdd1d742746765042bd5ec"),
+		Size:   920,
+		Md5:    MustMd5("87683b1fb6e6fa1e3de887df15ac5de9"),
+		Sha1:   MustSha1("dbf0265e662276ace37bab2917fee95edde31138"),
+		Name:   "test.tar.bz2",
+	},
 	Files: []SubFile{
 		{
 			Path: "date.txt",
@@ -55,11 +56,13 @@ var treeContainerSymlinkError *Archive = &Archive{
 		{
 			Path: "tar.utf8.tar.bz2",
 			Archive: &Archive{
-				Sha256: MustSha256("ee87767de57b973d084c9f0bcda3266bf443b8d18803ed4588064f31f9c48069"),
-				Size:   519,
-				Md5:    MustMd5("6f5f71b9112325ceab9d458ea23a85e3"),
-				Sha1:   MustSha1("753f0d2905bbb73229177552a94efb8150729459"),
-				Name:   "tar.utf8.tar.bz2",
+				ArchiveIdentifiers: ArchiveIdentifiers{
+					Sha256: MustSha256("ee87767de57b973d084c9f0bcda3266bf443b8d18803ed4588064f31f9c48069"),
+					Size:   519,
+					Md5:    MustMd5("6f5f71b9112325ceab9d458ea23a85e3"),
+					Sha1:   MustSha1("753f0d2905bbb73229177552a94efb8150729459"),
+					Name:   "tar.utf8.tar.bz2",
+				},
 				Files: []SubFile{
 					{
 						Path: "/symlink",
