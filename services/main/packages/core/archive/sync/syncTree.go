@@ -53,9 +53,8 @@ func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 			return partID, errors.Wrapf(err, "error inserting file_alias")
 		}
 
-		tmpUUID := uuid.New()
 		if _, err := db.Exec(`INSERT INTO part_has_file (part_id, file_sha256, path) VALUES ($1, $2, $3)`,
-			partID, subFile.Sha256[:], tmpUUID.String()+"/"+subFile.GetPath()); err != nil { // TODO trim // fuzzing path, TODO fix
+			partID, subFile.Sha256[:], subFile.GetPath()); err != nil { // TODO trim
 			return partID, errors.Wrapf(err, "error adding file to part (%s, %x, %s)", partID.String(), subFile.Sha256, subFile.GetPath())
 		}
 	}
@@ -77,7 +76,7 @@ func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 	// set file_verification_code
 	if result, err := db.Exec(`UPDATE part SET file_verification_code=$1 WHERE part_id=$2`,
 		root.FileVerificationCode, partID); err != nil {
-		return partID, errors.Wrapf(err, "error updating file_verification_code of part")
+		return partID, errors.Wrapf(err, "error updating file_verification_code of part: \"%s\"", partID.String())
 	} else {
 		count, err := result.RowsAffected()
 		if err != nil {

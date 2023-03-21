@@ -141,10 +141,17 @@ func (processor *ArchiveProcessor) ProcessArchive(archivePath string, archive *t
 		}
 
 		sub, ok := processor.ArchiveMap[newArchive.Sha256]
-		if !ok {
-			processor.ArchiveMap[newArchive.Sha256] = newArchive
-			sub = newArchive
+		if ok { // archive already processed previously
+			archive.Archives = upsertSlice[tree.SubArchive](archive.Archives, tree.SubArchive{
+				Path:    path, // TODO trim os path context
+				Archive: sub,
+			})
+
+			return nil
 		}
+
+		processor.ArchiveMap[newArchive.Sha256] = newArchive
+		sub = newArchive
 
 		if err := processor.extractArchive(path, sub); err != nil {
 			if _, ok := err.(ErrExtract); ok {
@@ -259,7 +266,7 @@ func (process *ArchiveProcessor) processFile(archive *tree.Archive, path string,
 		process.FileMap[newFile.Sha256] = newFile
 		file = newFile
 		if process.VisitFile != nil {
-			if err := process.VisitFile(path, newFile); err != nil { // TODO upload file
+			if err := process.VisitFile(path, newFile); err != nil {
 				return err
 			}
 		}
