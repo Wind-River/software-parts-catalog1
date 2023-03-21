@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"wrs/tk/packages/core/archive/tree"
 
 	"github.com/pkg/errors"
@@ -98,6 +99,22 @@ func upsertSlice[E any](dst []E, element E) []E {
 	return append(dst, element)
 }
 
+// trimPath is used to remove the first directory in the path
+// This directory is specific to our extraction process, and is not a directory originally of the archive
+func trimPath(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	if index := strings.Index(path, "/"); index == -1 {
+		return path
+	}
+
+	ret := filepath.Join(strings.Split(path, "/")[1:]...)
+
+	return ret
+}
+
 func (processor *ArchiveProcessor) ProcessArchive(archivePath string, archive *tree.Archive) (*tree.Archive, error) {
 	if archive == nil {
 		var err error
@@ -141,10 +158,17 @@ func (processor *ArchiveProcessor) ProcessArchive(archivePath string, archive *t
 		}
 
 		sub, ok := processor.ArchiveMap[newArchive.Sha256]
-		if !ok {
-			processor.ArchiveMap[newArchive.Sha256] = newArchive
-			sub = newArchive
+		if ok { // archive already processed previously
+			archive.Archives = upsertSlice[tree.SubArchive](archive.Archives, tree.SubArchive{
+				Path:    trimPath(path),
+				Archive: sub,
+			})
+
+			return nil
 		}
+
+		processor.ArchiveMap[newArchive.Sha256] = newArchive
+		sub = newArchive
 
 		if err := processor.extractArchive(path, sub); err != nil {
 			if _, ok := err.(ErrExtract); ok {
@@ -163,7 +187,7 @@ func (processor *ArchiveProcessor) ProcessArchive(archivePath string, archive *t
 		}
 
 		archive.Archives = upsertSlice[tree.SubArchive](archive.Archives, tree.SubArchive{
-			Path:    path, // TODO trim os path context
+			Path:    trimPath(path),
 			Archive: sub,
 		})
 
@@ -259,14 +283,14 @@ func (process *ArchiveProcessor) processFile(archive *tree.Archive, path string,
 		process.FileMap[newFile.Sha256] = newFile
 		file = newFile
 		if process.VisitFile != nil {
-			if err := process.VisitFile(path, newFile); err != nil { // TODO upload file
+			if err := process.VisitFile(path, newFile); err != nil {
 				return err
 			}
 		}
 	}
 
 	archive.Files = upsertSlice[tree.SubFile](archive.Files, tree.SubFile{
-		Path: path, // TODO trim
+		Path: trimPath(path),
 		File: file,
 	})
 

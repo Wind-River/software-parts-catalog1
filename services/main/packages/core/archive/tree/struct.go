@@ -2,6 +2,9 @@ package tree
 
 import (
 	"os"
+	"path/filepath"
+
+	"golang.org/x/text/runes"
 )
 
 type Sha256 [32]byte
@@ -18,7 +21,15 @@ type SubFile struct {
 	Path string
 }
 
-type Archive struct {
+func (sf SubFile) GetPath() string {
+	return runes.ReplaceIllFormed().String(sf.Path)
+}
+
+func (sf SubFile) GetName() string {
+	return runes.ReplaceIllFormed().String(filepath.Base(sf.Path))
+}
+
+type ArchiveIdentifiers struct {
 	// Identifying information
 	Sha256 Sha256
 	Size   int64
@@ -26,6 +37,14 @@ type Archive struct {
 	Sha1   [20]byte
 	// Misc
 	Name string
+}
+
+func (i ArchiveIdentifiers) GetName() string {
+	return runes.ReplaceIllFormed().String(i.Name)
+}
+
+type Archive struct {
+	ArchiveIdentifiers
 	// Relationships
 	Files    []SubFile
 	Archives []SubArchive
@@ -33,6 +52,7 @@ type Archive struct {
 	TmpPath              *string
 	Extracted            *string
 	FileVerificationCode []byte
+	DuplicateArchives    []ArchiveIdentifiers // All archives should be inserted into the database, but the purpose of the trees is actually to turn them into parts, so a separate list of duplicates is required
 }
 
 func (a *Archive) Close() error {

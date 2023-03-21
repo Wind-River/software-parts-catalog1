@@ -2,6 +2,7 @@ package sync
 
 import (
 	"path/filepath"
+	"strings"
 	"wrs/tk/packages/core/archive/tree"
 	"wrs/tk/packages/core/part"
 
@@ -21,7 +22,7 @@ func SyncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 		}
 
 		if _, err := db.Exec(`INSERT INTO archive_alias (archive_sha256, name) VALUES ($1, $2) ON CONFLICT (archive_sha256, name) DO NOTHING`,
-			root.Sha256[:], root.Name); err != nil {
+			root.Sha256[:], root.GetName()); err != nil {
 			return uuid.Nil, errors.Wrapf(err, "error upserting archive_alias")
 		}
 
@@ -34,11 +35,25 @@ func SyncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 	}
 }
 
+// trimPath is used to remove the first directory in the path
+// This directory is specific to our extraction process, and is not a directory originally of the archive
+func trimPath(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	if index := strings.Index(path, "/"); index == -1 {
+		return path
+	}
+
+	return filepath.Join(strings.Split(path, "/")[1:]...)
+}
+
 func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archive) (uuid.UUID, error) {
 	// Insert part
 	var partID uuid.UUID
 	if err := db.QueryRowx(`INSERT INTO part (type, name) VALUES ('archive', $1) RETURNING part_id`,
-		root.Name).Scan(&partID); err != nil {
+		root.GetName()).Scan(&partID); err != nil {
 		return partID, errors.Wrapf(err, "error creating part for archive")
 	}
 
@@ -50,14 +65,13 @@ func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 		}
 
 		if _, err := db.Exec(`INSERT INTO file_alias (file_sha256, name) VALUES ($1, $2) ON CONFLICT (file_sha256, name) DO NOTHING`,
-			subFile.Sha256[:], filepath.Base(subFile.Path)); err != nil {
+			subFile.Sha256[:], subFile.GetName()); err != nil {
 			return partID, errors.Wrapf(err, "error inserting file_alias")
 		}
 
-		tmpUUID := uuid.New()
 		if _, err := db.Exec(`INSERT INTO part_has_file (part_id, file_sha256, path) VALUES ($1, $2, $3)`,
-			partID, subFile.Sha256[:], tmpUUID.String()+"/"+subFile.Path); err != nil { // TODO trim // fuzzing path, TODO fix
-			return partID, errors.Wrapf(err, "error adding file to part (%s, %x, %s)", partID.String(), subFile.Sha256, subFile.Path)
+			partID, subFile.Sha256[:], trimPath(subFile.GetPath())); err != nil {
+			return partID, errors.Wrapf(err, "error adding file to part (%s, %x, %s)", partID.String(), subFile.Sha256, subFile.GetPath())
 		}
 	}
 
@@ -71,14 +85,14 @@ func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 		if _, err := db.Exec(`INSERT INTO part_has_part (parent_id, child_id, path) 
 		VALUES ($1, $2, $3)`,
 			partID, subPartID, subArchive.Path); err != nil {
-			return partID, errors.Wrapf(err, "error adding sub-archive")
+			return partID, errors.Wrapf(err, "error adding sub-archive (%s, %s, %s)", partID, subPartID, subArchive.Path)
 		}
 	}
 
 	// set file_verification_code
 	if result, err := db.Exec(`UPDATE part SET file_verification_code=$1 WHERE part_id=$2`,
 		root.FileVerificationCode, partID); err != nil {
-		return partID, errors.Wrapf(err, "error updating file_verification_code of part")
+		return partID, errors.Wrapf(err, "error updating file_verification_code of part: \"%s\"", partID.String())
 	} else {
 		count, err := result.RowsAffected()
 		if err != nil {
@@ -97,8 +111,25 @@ func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 	}
 
 	if _, err := db.Exec(`INSERT INTO archive_alias (archive_sha256, name) VALUES ($1, $2) ON CONFLICT (archive_sha256, name) DO NOTHING`,
-		root.Sha256[:], root.Name); err != nil {
+		root.Sha256[:], root.GetName()); err != nil {
 		return partID, errors.Wrapf(err, "error inserting root archive alias")
+	}
+
+	// Insert duplicates
+	if len(root.DuplicateArchives) > 0 {
+		for _, v := range root.DuplicateArchives {
+			// Insert archive and archive_alias
+			if _, err := db.Exec(`INSERT INTO archive (sha256, archive_size, md5, sha1, part_id) VALUES ($1, $2, $3, $4, $5)
+	ON CONFLICT (sha256) DO UPDATE SET part_id=EXCLUDED.part_id`,
+				v.Sha256[:], v.Size, v.Md5[:], v.Sha1[:], partID); err != nil {
+				return partID, errors.Wrapf(err, "error inserting root archive")
+			}
+
+			if _, err := db.Exec(`INSERT INTO archive_alias (archive_sha256, name) VALUES ($1, $2) ON CONFLICT (archive_sha256, name) DO NOTHING`,
+				v.Sha256[:], v.GetName()); err != nil {
+				return partID, errors.Wrapf(err, "error inserting root archive alias")
+			}
+		}
 	}
 
 	return partID, nil
