@@ -1,6 +1,8 @@
 package sync
 
 import (
+	"path/filepath"
+	"strings"
 	"wrs/tk/packages/core/archive/tree"
 	"wrs/tk/packages/core/part"
 
@@ -33,6 +35,20 @@ func SyncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 	}
 }
 
+// trimPath is used to remove the first directory in the path
+// This directory is specific to our extraction process, and is not a directory originally of the archive
+func trimPath(path string) string {
+	if path == "" {
+		return ""
+	}
+
+	if index := strings.Index(path, "/"); index == -1 {
+		return path
+	}
+
+	return filepath.Join(strings.Split(path, "/")[1:]...)
+}
+
 func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archive) (uuid.UUID, error) {
 	// Insert part
 	var partID uuid.UUID
@@ -54,7 +70,7 @@ func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 		}
 
 		if _, err := db.Exec(`INSERT INTO part_has_file (part_id, file_sha256, path) VALUES ($1, $2, $3)`,
-			partID, subFile.Sha256[:], subFile.GetPath()); err != nil { // TODO trim
+			partID, subFile.Sha256[:], trimPath(subFile.GetPath())); err != nil {
 			return partID, errors.Wrapf(err, "error adding file to part (%s, %x, %s)", partID.String(), subFile.Sha256, subFile.GetPath())
 		}
 	}
@@ -69,7 +85,7 @@ func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archi
 		if _, err := db.Exec(`INSERT INTO part_has_part (parent_id, child_id, path) 
 		VALUES ($1, $2, $3)`,
 			partID, subPartID, subArchive.Path); err != nil {
-			return partID, errors.Wrapf(err, "error adding sub-archive")
+			return partID, errors.Wrapf(err, "error adding sub-archive (%s, %s, %s)", partID, subPartID, subArchive.Path)
 		}
 	}
 
