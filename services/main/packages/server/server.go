@@ -21,6 +21,7 @@ import (
 	archive_core "wrs/tk/packages/core/archive"
 	"wrs/tk/packages/core/part"
 	"wrs/tk/packages/core/partlist"
+	"wrs/tk/packages/web_services/archive_web"
 
 	// "wrs/tk/packages/core/group"
 	"wrs/tk/packages/core/license"
@@ -142,6 +143,8 @@ func NewServer(host string, port int, db *sqlx.DB, frontdoorHost string, threads
 	}}))
 	router.Handle("/playground", playground.Handler("GraphQL playground", "/api/graphql"))
 	router.Handle("/api/graphql", graphqlHandler)
+	router.Get("/api/archive/{archiveSha256:[a-fA-F0-9]+}", archive_web.HandleArchiveDownload)               // if archive has a name, which it probably does, redirects
+	router.Get("/api/archive/{archiveSha256:[a-fA-F0-9]+}/{archiveName}", archive_web.HandleArchiveDownload) // serves archive with the given name
 
 	return &server, nil
 }
