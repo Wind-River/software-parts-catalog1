@@ -24,6 +24,7 @@ type ArchiveGraph struct {
 	Graph *generic.DirectedGraph[int64, int64]
 }
 
+// TODO WSTRPG-86; The whole extraction process needs a look
 func NewArchiveGraph(db *sqlx.DB, archiveID int64) (*ArchiveGraph, error) {
 	ag := new(ArchiveGraph)
 	ag.ID = archiveID

@@ -30,7 +30,7 @@ import (
 func (p *ArchiveController) ProcessFileCollection(archive *Archive, parentDirectory string, blobStorage blob.Storage) (vcodeOne []byte, vcodeTwo []byte, err error) {
 	packageGraph := analysis.NewPackageGraph()
 
-	collectionNode, err := packageGraph.InsertHexString(archive.Name.String, archive.Path.String, int(archive.Size.Int64), archive.Sha1.String, archive.Sha256.String)
+	collectionNode, err := packageGraph.InsertHexString(archive.Aliases[0], archive.StoragePath.String, int(archive.Size), hex.EncodeToString(archive.Sha1[:]), hex.EncodeToString(archive.Sha256[:]))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -39,6 +39,7 @@ func (p *ArchiveController) ProcessFileCollection(archive *Archive, parentDirect
 		archive, parentDirectory, blobStorage)
 }
 
+// TODO WSTRPG-86; assigning files
 // processFileCollection catalogs files found at parentDirectory as children of this archive, and recursively processes any sub-packages.
 func (p *ArchiveController) processFileCollection(db *sqlx.DB, packageGraph *analysis.PackageGraph, collectionNode *analysis.PackageNode,
 	arch *Archive, parentDirectory string, blobStorage blob.Storage) (vcodeOne []byte, vcodeTwo []byte, err error) {
@@ -58,32 +59,36 @@ func (p *ArchiveController) processFileCollection(db *sqlx.DB, packageGraph *ana
 			return err
 		}
 
+		if !fileStat.Mode().IsRegular() {
+			return nil // skip irregular file
+		}
+
 		f, err := NewFile(filePath)
 		if err != nil {
 			return err
 		}
 
-		// Insert file + file_alias
-		var faid int64
-		if err = db.QueryRowx("SELECT insert_file($1::TEXT, $2::BIGINT, $3::VARCHAR(64), $4::VARCHAR(40), $5::VARCHAR(32), $6::INTEGER, $7::INTEGER)",
-			unicode.ToValidUTF8(fileStat.Name()), // name
-			fileStat.Size(),                      // size
-			hex.EncodeToString(f.Sha256[:]),      // sha256
-			hex.EncodeToString(f.Sha1[:]),        // sha1
-			hex.EncodeToString(f.Md5[:]),         // md5
-			f.SymLinkInt(),                       // symlink
-			f.NamedPipeInt(),                     // fifo
-		).Scan(&faid); err != nil {
-			err = errors.Wrapf(err, "error inserting file + file_alias")
-			return err
+		// Insert file
+		if _, err = db.Exec("INSERT INTO file (sha256, file_size, md5, sha1) VALUES ($1, $2, $3, $4) ON CONFLICT (sha256) DO NOTHING",
+			f.Sha256[:],
+			fileStat.Size(),
+			f.Md5[:],
+			f.Sha1[:]); err != nil {
+			return errors.Wrapf(err, "error inserting file")
+		}
+
+		// Insert file_alias
+		if _, err = db.Exec("INSERT INTO file_alias (file_sha256, name) VALUES ($1, $2) ON CONFLICT (file_sha256, name) DO NOTHING",
+			f.Sha256[:], fileStat.Name()); err != nil {
+			return errors.Wrapf(err, "error inserting file_alias")
 		}
 
 		// Insert file_belongs_archive
 		if _, err = db.Exec("INSERT INTO file_belongs_archive(archive_id, file_id, path) "+
 			"VALUES ($1, $2, $3) "+
 			"ON CONFLICT (archive_id, file_id, path) DO NOTHING",
-			arch.ArchiveID, // archive_id
-			faid,           // file_id
+			"TODO", // archive_id
+			"TODO", // file_id
 			unicode.ToValidUTF8(strings.TrimPrefix(filePath, parentDirectory)), // path
 		); err != nil {
 			err = errors.Wrapf(err, "error inserting file_belongs_archive")
@@ -121,18 +126,19 @@ func (p *ArchiveController) processFileCollection(db *sqlx.DB, packageGraph *ana
 			if err := p.SyncArchive(db, sub); err != nil {
 				return err
 			}
-			if !sub.FileCollectionID.Valid {
+			if sub.PartID == nil {
 				// extract archive
 				extDir := "/opt/tk/uploads/ext" // TODO make this non-static
 				archiveExtractDir := extDir
-				for i := 0; i < len(sub.Sha256.String)-2; i += 2 { // make a directory every two characters (1 byte) of the sha256
-					archiveExtractDir = filepath.Join(archiveExtractDir, sub.Sha256.String[i:i+2])
+				for i := 0; i < len(sub.Sha256); i++ { // make a directory every two characters (1 byte) of the sha256
+					character := hex.EncodeToString(sub.Sha256[i : i+1])
+					archiveExtractDir = filepath.Join(archiveExtractDir, character)
 				}
 				if err := os.MkdirAll(archiveExtractDir, 0755); err != nil {
 					err = errors.Wrapf(err, "error making archiveExtractDir %s", archiveExtractDir)
 					return err
 				}
-				e, err := extract.NewAt(sub.Path.String, fi.Name(), archiveExtractDir)
+				e, err := extract.NewAt(sub.StoragePath.String, fi.Name(), archiveExtractDir)
 				if err != nil {
 					err = errors.Wrapf(err, "error setting-up extraction")
 					return err
@@ -140,10 +146,10 @@ func (p *ArchiveController) processFileCollection(db *sqlx.DB, packageGraph *ana
 				extractPath, err := e.Extract()
 				if err != nil {
 					// Treat as file instead
-					return processAsFileFunc(db, sub.Path.String)
+					return processAsFileFunc(db, sub.StoragePath.String)
 				}
 
-				node, err := packageGraph.InsertHexString(fi.Name(), sub.Path.String, int(fi.Size()), sub.Sha1.String, sub.Sha256.String)
+				node, err := packageGraph.InsertHexString(fi.Name(), sub.StoragePath.String, int(fi.Size()), hex.EncodeToString(sub.Sha1[:]), hex.EncodeToString(sub.Sha256[:]))
 				if err != nil {
 					return err
 				}
@@ -162,11 +168,11 @@ func (p *ArchiveController) processFileCollection(db *sqlx.DB, packageGraph *ana
 			if _, err = db.Exec("INSERT INTO archive_contains(parent_id, child_id, path) "+
 				"VALUES ($1, $2, $3) "+
 				"ON CONFLICT(parent_id, child_id, path) DO NOTHING",
-				arch.ArchiveID,       // parent_id
-				sub.FileCollectionID, // child_id
-				pth,                  // path
+				arch.Sha256, // parent_id
+				sub.PartID,  // child_id
+				pth,         // path
 			); err != nil {
-				err = errors.Wrapf(err, "error inserting into archive_contains(%d, %d, %s)", arch.ArchiveID, sub.FileCollectionID.Int64, pth)
+				err = errors.Wrapf(err, "error inserting into archive_contains(%x, %s, %s)", arch.Sha256, *sub.PartID, pth)
 				return err
 			}
 		} else {
@@ -213,7 +219,7 @@ func (p *ArchiveController) processFileCollection(db *sqlx.DB, packageGraph *ana
 	}
 
 	// fetch verification code
-	vcodeOne, vcodeTwo, err = p.CalculateArchiveVerificationCode(arch.ArchiveID)
+	vcodeOne, vcodeTwo, err = p.CalculateArchiveVerificationCode(404) // arch.ArchiveID
 	if err != nil {
 		return nil, nil, err
 	}
@@ -234,20 +240,19 @@ func (p *ArchiveController) processFileCollection(db *sqlx.DB, packageGraph *ana
 	// Update archives
 	db.NamedExec("UPDATE archive SET file_collection_id=:cid WHERE id=:aid", map[string]interface{}{
 		"cid": cid,
-		"aid": arch.ArchiveID,
+		"aid": arch.Sha256,
 	})
 
 	// Transfer file_belongs_archive rows to file_belongs_collection
 	if _, err = db.Exec("SELECT assign_archive_to_file_collection($1, $2)",
-		arch.ArchiveID, // archive_id
-		cid,            // file_collection_id
+		arch.Sha256, // archive_id
+		cid,         // file_collection_id
 	); err != nil {
 		err = errors.Wrapf(err, "error assigning archive file to file_collectior")
 		return vcodeOne, vcodeTwo, err
 	}
 
-	arch.FileCollectionID.Int64 = cid
-	arch.FileCollectionID.Valid = true
+	// arch.PartID = cid set partid
 
 	return vcodeOne, vcodeTwo, nil
 }

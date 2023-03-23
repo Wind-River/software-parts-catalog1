@@ -18,50 +18,57 @@ CREATE TABLE IF NOT EXISTS part (
     type LTREE,
     name TEXT,
     version TEXT,
-    family_name TEXT,
+    family_name LTREE,
     file_verification_code BYTEA UNIQUE,
     size BIGINT,
     license TEXT,
-    license_rationale TEXT,
+    license_rationale JSON,
+    license_notice TEXT,
     automation_license TEXT,
+    automation_license_rationale JSON,
     comprised UUID REFERENCES part(part_id)
 );
 
 -- +goose StatementBegin
+CREATE OR REPLACE FUNCTION collect_part_files_sha256(_pid UUID) RETURNS SHA256_BYTEA[] LANGUAGE plpgsql AS $$
+    DECLARE
+        _file RECORD;
+        _sub_part UUID;
+        _shas SHA256_BYTEA[] := ARRAY[]::SHA256_BYTEA[];
+    BEGIN
+        FOR _file IN SELECT f.sha256 FROM file f
+            INNER JOIN part_has_file phf ON phf.file_sha256=f.sha256
+            INNER JOIN part p ON p.part_id=phf.part_id
+            WHERE p.part_id=_pid
+            AND f.sha256 IS NOT NULL
+        LOOP
+            _shas := _shas || _file.sha256;
+        END LOOP;
+
+        FOR _sub_part IN SELECT php.child_id FROM part_has_part php
+            WHERE php.parent_id=_pid
+        LOOP
+            SELECT array_cat(_shas, (SELECT collect_part_files_sha256(_sub_part))) INTO _shas;
+        END LOOP;
+
+        RETURN _shas;
+    END;
+$$;
+-- +goose StatementEnd
+
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION calculate_part_verification_code_v2(_pid UUID) RETURNS BYTEA LANGUAGE plpgsql AS $$
     DECLARE
-        _row RECORD;
         _shas SHA256_BYTEA[] := ARRAY[]::SHA256_BYTEA[];
+        _sha SHA256_BYTEA;
         _data BYTEA := '';
         _vcode BYTEA;
     BEGIN
-        FOR _row IN SELECT f.sha256 FROM file f
-            INNER JOIN part_has_file phf ON phf.file_sha256=f.sha256
-            INNER JOIN part p ON p.part_id=phf.part_id
-            WHERE p.part_id = _pid
-            AND f.sha256 IS NOT NULL
-        LOOP
-            _shas := _shas || _row.sha256;
-        END LOOP;
+        SELECT collect_part_files_sha256(_pid) INTO _shas;
 
-        FOR _row IN WITH RECURSIVE parts AS (
-                SELECT php.child_id as part_id FROM part_has_part php WHERE php.parent_id=_pid
-                UNION
-                SELECT child_id as part_id FROM part_has_part
-                INNER JOIN parts ON parts.part_id=part_has_part.parent_id
-            )
-            SELECT f.sha256 FROM file f
-            INNER JOIN part_has_file phf ON phf.file_sha256=f.sha256
-            INNER JOIN part p ON p.part_id=phf.part_id
-            INNER JOIN parts ON parts.part_id=p.part_id
-            WHERE f.sha256 IS NOT NULL
+        FOR _sha IN SELECT UNNEST(_shas) AS s ORDER BY s
         LOOP
-            _shas := _shas || _row.sha256;
-        END LOOP;
-
-        FOR _row IN SELECT UNNEST(_shas) AS s ORDER BY s
-        LOOP
-            _data := _data || _row.s;
+            _data := _data || _sha;
         END LOOP;
 
         SELECT digest(_data, 'sha256') INTO _vcode;
@@ -101,7 +108,7 @@ CREATE TABLE IF NOT EXISTS part_has_part (
     parent_id UUID REFERENCES part(part_id),
     child_id UUID REFERENCES part(part_id),
     path TEXT,
-    PRIMARY KEY(parent_id, child_id, path),
+    PRIMARY KEY(parent_id, child_id, path)
 );
 
 CREATE TABLE IF NOT EXISTS part_alias (
@@ -142,7 +149,7 @@ CREATE TABLE IF NOT EXISTS file_alias (
 CREATE TABLE IF NOT EXISTS part_has_file (
     part_id UUID REFERENCES part(part_id),
     file_sha256 SHA256_BYTEA REFERENCES file(sha256),
-    PATH TEXT NOT NULL,
+    path TEXT NOT NULL,
     PRIMARY KEY(part_id, file_sha256, path)
 );
 

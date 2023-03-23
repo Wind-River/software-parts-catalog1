@@ -19,16 +19,13 @@ import (
 	"wrs/tk/packages/blob/bucket"
 	mainConfig "wrs/tk/packages/config"
 	archive_core "wrs/tk/packages/core/archive"
-	"wrs/tk/packages/core/file_collection"
-	"wrs/tk/packages/core/group"
+	"wrs/tk/packages/core/part"
+	"wrs/tk/packages/core/partlist"
+
+	// "wrs/tk/packages/core/group"
 	"wrs/tk/packages/core/license"
-	"wrs/tk/packages/core/upload"
 	"wrs/tk/packages/database"
 	"wrs/tk/packages/middleware"
-	"wrs/tk/packages/web_services/container_web"
-	"wrs/tk/packages/web_services/group_web"
-	"wrs/tk/packages/web_services/license_web"
-	"wrs/tk/packages/web_services/upload_web"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/go-chi/chi/v5"
@@ -121,45 +118,27 @@ func NewServer(host string, port int, db *sqlx.DB, frontdoorHost string, threads
 
 	// Create new controllers
 	archiveController := archive_core.NewArchiveController(db, fileStorage, archiveStorage, int(threads), config.Blob.Bucket, cred, config.Blob.Endpoint, config.Blob.Region)
-	fileCollectionController := file_collection.FileCollectionController{DB: db}
+	partController := part.PartController{DB: db}
+	partlistController := partlist.PartListController{DB: db}
 	licenseController := license.LicenseController{
-		DB:                       db,
-		FileCollectionController: fileCollectionController,
-		ArchiveController:        archiveController,
+		DB:                db,
+		PartController:    partController,
+		ArchiveController: archiveController,
 	}
-	groupController := group.GroupController{DB: db}
+	// groupController := group.GroupController{DB: db}
 
 	router.Use(middleware.ContextWithValue(archive_core.ArchiveKey, archiveController))
-	router.Use(middleware.ContextWithValue(file_collection.FileCollectionKey, &fileCollectionController))
+	router.Use(middleware.ContextWithValue(part.PartKey, &partController))
+	router.Use(middleware.ContextWithValue(partlist.PartListKey, &partlistController))
 	router.Use(middleware.ContextWithValue(license.LicenseKey, &licenseController))
-	router.Use(middleware.ContextWithValue(group.GroupKey, &groupController))
+	// router.Use(middleware.ContextWithValue(group.GroupKey, &groupController))
 
-	// Create new-style endpoints for workernodes
-	router.Get("/rest/container", container_web.HandleContainerQuery)
-	router.Get("/rest/license", license_web.HandleLicenseQuery)
-	router.Get("/rest/group", group_web.HandleGroupQuery)
 	//
-	// router.PathPrefix("/rest/").Handler(routes.TKRestHandlerAt("/rest/"))
-	uploadController, err := upload.NewUploadController(config.Server.UploadDirectory, fileStorage, db,
-		archiveController, fileCollectionController, licenseController)
-	if err != nil {
-		return nil, err
-	}
-	uploadHandler := upload_web.UploadHandler{ // TODO use context value
-		UploadController: uploadController,
-	}
-	router.Post("/api/upload", uploadHandler.HandleUpload)
-	router.Post("/api/upload/process", uploadHandler.HandleProcessRequest)
-	router.Get("/api/container/download/{archiveID:[0-9]+}", container_web.HandleContainerDownload)
-	router.Get("/api/container/{fcid:[0-9]+}", container_web.HandleContainerGet)
-	router.Get("/api/container/search", container_web.HandleContainerSearch) // TODO move to controller
-	router.Get("/api/group/{groupID:[0-9]+}", group_web.HandleGroupGet)
-	router.Get("/api/group/search", group_web.HandleGroupSearch) // TODO move to controller
-
 	graphqlHandler := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graphql.Resolver{
-		ArchiveController:        archiveController,
-		FileCollectionController: &fileCollectionController,
-		LicenseController:        &licenseController,
+		ArchiveController:  archiveController,
+		PartController:     &partController,
+		PartListController: &partlistController,
+		LicenseController:  &licenseController,
 	}}))
 	router.Handle("/playground", playground.Handler("GraphQL playground", "/api/graphql"))
 	router.Handle("/api/graphql", graphqlHandler)

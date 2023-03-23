@@ -1,476 +1,308 @@
 <!-- Package file upload page -->
 <template>
-  <div class="d-flex justify-center">
-    <div class="d-flex flex-column w-75 mt-12">
-      <h2 class="text-blue-grey-darken-3">Upload Parts</h2>
-      <component
-        :is="Modal"
-        v-if="showModal"
-        @close="showModal = false"
-        :payload="modalPayload"
-      >
-        <template v-slot:header>
-          <h2>Processing Failed</h2>
-          <p>{{ modalMessage }}</p>
-        </template>
-        <component :is="CSV" v-if="modalCSV" :text="modalData" />
-        <div v-else>{{ modalData }}</div>
-      </component>
-      <div id="drag-drop" />
-      <v-row class="mt-4 justify-center">
-        <v-btn
-          @click="resetPressed"
-          width="200"
-          color="blue-grey-darken-3"
-          class="mr-1"
-          >Reset</v-btn
-        >
-        <v-btn
-          :disabled="!processingAllowed"
-          @click="processPressed"
-          color="primary"
-          width="200"
-        >
-          Download CSV
-        </v-btn>
-      </v-row>
-      <div class="align-self-center mt-1" v-if="false">
-        <v-checkbox
-          id="autobox"
-          v-model="autoUpload"
-          label="Auto-Process"
-        ></v-checkbox>
-      </div>
-      <br />
-      <div v-if="csv.length > 0">
-        <h4 v-if="csvError.length == 0">CSV Processed: {{ csv }}</h4>
-        <h4 v-else style="color: red">CSV Not Processed: {{ csv }}</h4>
-      </div>
-      <p style="color: red">{{ csvError }}</p>
-
-      <table class="no-border mt-6">
-        <tr class="no-border">
-          <td class="no-border">
-            <div v-if="elementsExist" class="file-list">
-              <template v-if="processing">
-                <h4 :style="{ display: 'inline-block' }">Processing Files</h4>
-                <div
-                  :style="{
-                    display: 'inline-block',
-                    height: '20px',
-                    width: '20px',
-                  }"
-                  class="spinner"
-                />
-              </template>
-              <h4 v-else>Uploaded Files {{ files.length }}</h4>
-              <ul>
-                <li v-for="(file, index) in files" :key="index">
-                  {{ file.filename }}
-                </li>
-              </ul>
-            </div>
-          </td>
-
-          <td class="no-border">
-            <div v-if="elementsExist" class="upload-list">
-              <h4>Upload Progress {{ elementsLength }} Left</h4>
-              <ul>
-                <li v-for="(element, index) in incompleteUploads" :key="index">
-                  {{ element.data.fullPath }}: {{ element.perc }}%
-                </li>
-              </ul>
-            </div>
-          </td>
-        </tr>
-      </table>
+  <v-container>
+    <div class="d-flex flex-column align-center">
+      <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-75">
+        <h3 class="px-8">Upload Parts</h3>
+        <Upload
+          type="application/*,.bz2,.xz"
+          message="Click to select files"
+          icon="mdi-upload"
+          :processing="processing"
+          @sendFiles="handleUpload"
+        />
+        <div class="text-subtitle align-self-end">
+          {{ processedFiles + "/" + fileCount }}
+        </div>
+      </v-card>
+      <v-table v-if="uploadedArchives.length > 0" class="ma-4">
+        <thead>
+          <tr>
+            <th>{{ processedFiles + "/" + fileCount }}</th>
+          </tr>
+          <tr>
+            <th>Name</th>
+            <th>Checksum</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(archive, index) in uploadedArchives" :key="index">
+            <td>{{ archive.name }}</td>
+            <td>{{ archive.sha256 ? archive.sha256 : archive.sha1 }}</td>
+            <td>
+              <v-icon color="primary">{{
+                archive.part ? "mdi-check" : "mdi-update"
+              }}</v-icon>
+            </td>
+          </tr>
+        </tbody>
+      </v-table>
     </div>
-  </div>
+  </v-container>
+  <v-dialog v-model="showDialog" transition="scale-transition">
+    <v-card width="50%" class="align-self-center">
+      <v-btn @click="downloadCSV" color="primary">Download CSV</v-btn>
+      <v-btn @click="showDialog = false">Close</v-btn>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
-import { Ref, ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { useMutation, useQuery } from "@urql/vue"
+import { onBeforeMount, Ref, ref } from "vue"
+import download from "downloadjs"
+import Upload from "@/components/Upload.vue"
+import { useRoute } from "vue-router"
 
-import Modal from "@/components/Modal.vue";
-import CSV from "@/components/CSV.vue";
-import download from "downloadjs";
-
-import Uppy from "@uppy/core";
-import XHRUpload from "@uppy/xhr-upload";
-import DrapDrop from "@uppy/drag-drop";
-
-import "@uppy/core/dist/style.css";
-import "@uppy/drag-drop/dist/style.css";
-
-type file = {
-  id: string;
-  filename: string;
-  sha1: string;
-  uploadName: string;
-  contentType: string;
-  header: {
-    Filename: string;
-    Header: Record<string, string[]>;
-  };
-};
-type XHRUploadResponse = {
-  status: number;
-  body: {
-    Filename: string;
-    Uploadname: string;
-    Sha1: string;
-    isMeta: boolean;
-    "Content-Type": string;
-    Header: {
-      Filename: string;
-      Header: {
-        "Content-Disposition": string[];
-        "Content-Type": string[];
-      };
-    };
-    Extra?: string;
-  };
-  uploadURL?: string;
-};
-
-type XHRUploadProgress = {
-  bytesUploaded: number;
-  bytesTotal: number;
-  uploadStarted: null | number; // null or UNIX timestamp
-  percentage: number; // Integer [0, 100]
-};
-
-interface UppyFilePerc extends Uppy.UppyFile {
-  perc?: string;
+//Defines the data types expected to be returned from the catalog
+type Archive = {
+  name: string
+  insert_date: string
+  sha256: string
+  sha1: string
+  part_id: string
+  part: Part
+}
+type Part = {
+  file_verification_code: string
+  license: string
+  license_rationale: string
+  license_notice: string
 }
 
-type ModalPayload = {
-  data: string;
-  filename: string;
-  mime: string;
-};
+//Various refs used in file upload processing
+const uploadedArchives: Ref<Archive[]> = ref([])
+const processing: Ref<boolean> = ref(false)
+const showDialog: Ref<boolean> = ref(false)
+const fileCount: Ref<number> = ref(0)
+const processedFiles: Ref<number> = ref(0)
 
-const files: Ref<file[]> = ref([]);
-const uploadList: Ref<UppyFilePerc[]> = ref([]);
-const uploadDict: Ref<Record<string, number>> = ref({});
-const autoUpload: Ref<boolean> = ref(false);
-const processing: Ref<boolean> = ref(false);
-const newFile: Ref<boolean> = ref(false);
+//Mutation is responsible for uploading files to the catalog and returning archive data
+const uploadMutation = useMutation(`
+  mutation($file: Upload!){
+    uploadArchive(file: $file){
+      archive{
+        name
+        sha256
+        sha1
+        Size
+        md5
+        part_id
+        part{
+          id
+          type
+          name
+          version
+          family_name
+          file_verification_code
+          size
+          license
+          license_rationale
+          license_notice
+          automation_license
+          automation_license_rationale
+          comprised
+        }
+      }
+    }
+  }
+`)
 
-const modalMessage: Ref<string> = ref("");
-const modalData: Ref<null | string> = ref(null);
-const modalPayload: Ref<ModalPayload | null> = ref(null);
-const modalCSV: Ref<boolean> = ref(false);
-const showModal: Ref<boolean> = ref(false);
+//Responsible for handling archives on first upload to catalog
+const incompleteUploads: Ref<string[]> = ref([])
+const currentName: Ref<string> = ref("")
+const archiveQuery = useQuery({
+  query: `
+  query($archiveName: String){
+    archive(name: $archiveName){
+      name
+      sha256
+      sha1
+      Size
+      md5
+      part_id
+      part{
+        id
+        type
+        name
+        version
+        family_name
+        file_verification_code
+        size
+        license
+        license_rationale
+        license_notice
+        automation_license
+        automation_license_rationale
+        comprised
+      }
+    }
+  }`,
+  variables: { archiveName: currentName },
+})
+const queryResponse = archiveQuery.data
+const queryError = archiveQuery.error
+const queryFetching = archiveQuery.fetching
 
-const csv: Ref<string> = ref("");
-const csvError: Ref<string> = ref("");
+//Processes any archives that returned invalid data typically due to first upload
+async function processIncomplete() {
+  for (const name of incompleteUploads.value) {
+    const result = await retrieveArchive(name)
+    uploadedArchives.value.push(result)
+  }
+  processing.value = false
+  if (pid.value != undefined) {
+      addToPartList(uploadedArchives.value)
+    }
+  showDialog.value = true
+  incompleteUploads.value = []
+}
 
-const uppy: Ref<Uppy.Uppy<"strict"> | null> = ref(null);
+//Retrieves information about given archive from catalog
+async function retrieveArchive(name: string) {
+  currentName.value = name
+  await archiveQuery.executeQuery()
+  if (queryResponse.value.archive.name === name) {
+    return queryResponse.value.archive
+  }
+  if (queryError.value) {
+    console.log(queryError.value)
+  }
+  if (queryFetching.value) {
+    console.log(queryFetching.value)
+  }
+  if (queryResponse.value.archive === null) {
+    retrieveArchive(name)
+  }
+  return
+}
 
-const processingAllowed = computed(function getProcessingAllowed(): boolean {
-  return files.value.length > 0 && !processing.value;
-});
+//Converts returned archive and part data into downloadable csv
+function convertToCSV(arr: Archive[]) {
+  const array = [
+    "name",
+    "insert_date",
+    "checksum",
+    "verification_code",
+    "license",
+    "license_rationale",
+    "license_notice",
+    "copyright",
+    "\n",
+  ]
 
-const uploadElements = computed(function getUploadElements(): UppyFilePerc[] {
-  return uploadList.value
-    .filter(function (value: UppyFilePerc): boolean {
-      return value.progress?.percentage !== 1;
+  const parsedArr = arr
+    .map((archive) => {
+      if (archive.part !== null) {
+        return [
+          archive.name,
+          archive.insert_date,
+          archive.sha256 ? archive.sha256 : archive.sha1,
+          archive.part.file_verification_code,
+          archive.part.license,
+          archive.part.license_rationale,
+          archive.part.license_notice,
+        ].toString()
+      } else
+        return [
+          archive.name,
+          archive.insert_date,
+          archive.sha256 ? archive.sha256 : archive.sha1,
+        ]
     })
-    .map(function (value: UppyFilePerc): UppyFilePerc {
-      const perc = ((value.progress?.percentage || 0) * 100).toFixed(0);
-      value.perc = perc;
-      return value;
-    });
-});
+    .join("\n")
 
-const elementsLength = computed(function getElementsLength(): number {
-  return uploadElements.value.length;
-});
+  return array.toString() + parsedArr
+}
 
-const elementsExist = computed(function getElementsExist(): boolean {
-  return files.value.length > 0 || uploadElements.value.length > 0;
-});
+//Converts data into csv format and then allows user to download csv file
+function downloadCSV() {
+  download(convertToCSV(uploadedArchives.value), "tk-prefilled", "text/csv")
+  showDialog.value = false
+}
 
-const incompleteUploads = computed(
-  function getIncompleteUploads(): UppyFilePerc[] {
-    return uploadElements.value.filter((value: UppyFilePerc): boolean => {
-      return value.progress?.percentage !== 1;
-    });
-  }
-);
-
-function process(): void {
-  if (!processing.value && files.value.length > 0) {
-    processing.value = true;
-    var ok = true;
-    // var status = 200
-    fetch(
-      new Request("/api/upload/process", {
-        method: "POST",
-        mode: "same-origin",
-        body: JSON.stringify(files.value),
+//Uses file upload component to upload files to catalog
+async function handleUpload(files: File[]) {
+  processing.value = true
+  fileCount.value += files.length
+  let retry = false
+  for (const file of files) {
+    processedFiles.value++
+    await uploadMutation
+      .executeMutation({ file: file })
+      .then((value) => {
+        if (value.error) {
+          console.log(value.error)
+          if (
+            value.error?.message ===
+            "[GraphQL] the requested element is null which the schema does not allow"
+          ) {
+            incompleteUploads.value.push(file.name)
+            retry = true
+          }
+        }
+        return value
       })
-    )
-      .catch((error) => {
-        // Error making fetch request
-        alert(JSON.stringify(error));
-        processing.value = false;
-      })
-      .then((response) => {
-        // Process fetch response
-        if (response instanceof Response) {
-          ok = response.ok;
-          return response.text();
-        } else {
-          processing.value = false;
+      .then((value) => {
+        if (value.data.uploadArchive.archive) {
+          uploadedArchives.value.push(value.data.uploadArchive.archive)
         }
       })
-      .then((text) => {
-        if (ok && typeof text === "string") {
-          download(text, "tk-prefilled.csv", "text/csv");
-          reset();
-        } else {
-          modalData.value = text || "null";
-          modalPayload.value = {
-            data: modalData.value,
-            filename: "tk-error.csv",
-            mime: "text/csv",
-          };
-          modalMessage.value =
-            "Errors encountered processing the following files";
-          modalCSV.value = true;
-          showModal.value = true;
-        }
-
-        processing.value = false;
-      })
-      .catch((result) => {
-        alert(JSON.stringify(result));
-        processing.value = false;
-      });
   }
-}
-
-function reset(): void {
-  console.log("this.reset()");
-  files.value = [];
-  uploadList.value = [];
-  uploadDict.value = {};
-  // leave this.autoUpload unchanged
-  processing.value = false;
-  newFile.value = false;
-  csv.value = "";
-  csvError.value = "";
-
-  if (uppy.value instanceof Uppy.Uppy) {
-    uppy.value.reset();
-  }
-}
-
-function processPressed(): void {
-  process();
-}
-
-function resetPressed(): void {
-  reset();
-}
-
-function debug(): void {
-  if (uppy.value instanceof Uppy.Uppy) {
-    console.log(uppy.value.getState());
-  }
-}
-
-onMounted(function (): void {
-  if (uppy.value === null) {
-    mountUppy().run();
+  if (retry) {
+    processIncomplete()
   } else {
-    uppy.value.run();
+    processing.value = false
+    if (pid.value != undefined) {
+      addToPartList(uploadedArchives.value)
+    }
+    showDialog.value = true
   }
-});
-
-function mountUppy(): Uppy.Uppy<"strict"> {
-  uppy.value = Uppy<Uppy.StrictTypes>({
-    meta: {
-      type: "binary",
-    },
-    autoProceed: true,
-  });
-
-  uppy.value.use(XHRUpload, {
-    endpoint: "/api/upload",
-    method: "post",
-    formData: true,
-    fieldName: "file",
-    timeout: 0,
-    limit: 3,
-  });
-
-  uppy.value.use(DrapDrop, {
-    target: "#drag-drop",
-    width: "100%",
-    height: "100%",
-    note: "Then download CSV after upload completes",
-    locale: {
-      strings: {
-        dropHereOr: "Drop files here or %{browse}",
-        browse: "browse",
-      },
-    },
-  });
-
-  uppy.value.on("file-added", (file: Uppy.UppyFile): void => {
-    const ind = uploadList.value.push(file) - 1;
-    uploadDict.value[file.id] = ind;
-  });
-
-  uppy.value.on("complete", (result) => {
-    if (files.value.length === uploadList.value.length) {
-      if (uppy.value instanceof Uppy.Uppy) {
-        uppy.value.reset();
-        console.log("this.uppy.reset()");
-      } else {
-        console.error("cannot reset null uppy");
-      }
-      if (newFile.value && autoUpload.value) {
-        newFile.value = false;
-        process();
-      }
-    }
-  });
-
-  uppy.value.on(
-    "upload-success",
-    (file: Uppy.UppyFile, response: XHRUploadResponse) => {
-      // console.log(`upload-success(${file.id}, ${JSON.stringify(response)})`)
-      if (response.body.isMeta === false) {
-        const f = {
-          id: file.id,
-          filename: response.body.Filename,
-          sha1: response.body.Sha1,
-          uploadName: response.body.Uploadname,
-          contentType: response.body["Content-Type"],
-          header: response.body.Header,
-        };
-
-        files.value.push(f);
-        newFile.value = true;
-      } else {
-        if (Object.prototype.hasOwnProperty.call(response.body, "Extra")) {
-          modalData.value = null; // this.modalData = 'test'
-          modalPayload.value = {
-            data: response.body.Extra || "",
-            filename: "tk-csv-error.csv",
-            mime: "text/csv",
-          };
-          modalMessage.value =
-            "Errors were encountered while updating. Details can be found by Downloading the attatched CSV file.";
-          modalCSV.value = false;
-          showModal.value = true;
-        }
-
-        csv.value = response.body.Filename;
-        console.log(`Set csv to ${csv.value}`);
-      }
-    }
-  );
-
-  uppy.value.on(
-    "upload-progress",
-    (file: Uppy.UppyFile, progress: XHRUploadProgress) => {
-      const f = uploadList.value[uploadDict.value[file.id]];
-      if (f.progress === undefined) {
-        f.progress = {
-          bytesTotal: 0,
-          bytesUploaded: 0,
-          percentage: 0,
-          uploadStarted: null,
-          uploadComplete: false,
-        };
-      }
-
-      f.progress.bytesTotal = progress.bytesTotal;
-      f.progress.bytesUploaded = progress.bytesUploaded;
-      f.progress.percentage = f.progress.bytesUploaded / f.progress.bytesTotal;
-
-      if (f.progress.percentage === 1) {
-        f.progress.uploadComplete = true;
-      }
-    }
-  );
-
-  return uppy.value;
 }
 
-onBeforeUnmount(function (): void {
-  if (uppy.value !== null) {
-    uppy.value.close();
-    // this.uppy = null
+//If a partlist has been selected to add parts this will perform that mutation
+const partListMutation = useMutation(`
+mutation($id: Int64!, $parts: [UUID]){
+  updatePartList(id: $id, parts: $parts){
+    id
+    name
+    parent_id
   }
-});
+}
+`)
+
+async function addToPartList(archives: Archive[]) {
+  const partIDS: string[] = []
+  for (const archive of archives){
+    if (archive.part_id){
+      partIDS.push(archive.part_id)
+    }
+  }
+  await partListMutation.executeMutation({id: pid.value, parts: partIDS}).then((value) => {
+    if (value.error){
+      console.log(value.error)
+    }
+    if(value.data){
+      console.log(value.data)
+    }
+  })
+}
+
+//Responsible for checking if a partlist has been selected to add parts to
+const route = useRoute()
+const pid: Ref<number | undefined> = ref()
+
+onBeforeMount(function () {
+  var id: string
+  if (route.params.id === undefined) {
+    return
+  } else if (typeof route.params.id === "string") {
+    id = route.params.id
+  } else {
+    id = route.params.id[0]
+  }
+
+  pid.value = parseInt(id)
+  console.log(pid.value)
+})
 </script>
-
-<style lang="scss">
-.spinner {
-  -webkit-animation: spin 1.5s linear infinite;
-  animation: spin 1.5s linear infinite;
-  border: 3px solid #ddd;
-  border-top-width: 3px;
-  border-top-style: solid;
-  border-radius: 50%;
-}
-
-@-webkit-keyframes spin {
-  0% {
-    border-top-color: #42a5f5;
-  }
-  50% {
-    border-top-color: #ec407a;
-  }
-  100% {
-    border-top-color: #42a5f5;
-    -webkit-transform: rotate(360deg);
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes spin {
-  0% {
-    border-top-color: #42a5f5;
-  }
-  50% {
-    border-top-color: #ec407a;
-  }
-  100% {
-    border-top-color: #42a5f5;
-    -webkit-transform: rotate(360deg);
-    transform: raotate(360deg);
-  }
-}
-
-table {
-  width: 100%;
-}
-
-.no-border {
-  border: none !important;
-}
-td.no-border {
-  vertical-align: top;
-  width: 50%;
-}
-
-.uppy-DragDrop-arrow {
-  width: 60px;
-  height: 60px;
-  fill: black; // fill: lighten(gray, 30%);
-  margin-bottom: 17px;
-}
-
-.uppy-DragDrop-note {
-  font-size: 1em;
-  //color: lighten(gray, 10%);
-  color: black;
-}
-</style>

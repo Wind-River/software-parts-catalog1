@@ -9,7 +9,10 @@ node_modules/
 src/vue/dist
 bin/
 dist/
-secrets/
+secrets/*
+!secrets/README.md
+!secrets/default_secrets/
+!secrets/default_secrets/ssl/ssl_crt.key
 services/db/docker-entrypoint-initdb.d/restore/tkdb/*
 services/db/docker-entrypoint-initdb.d/restore/blob/*
 .env

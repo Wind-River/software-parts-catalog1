@@ -4,8 +4,6 @@ import 'vuetify/styles'
 
 // Vuetify
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 
 export default createVuetify({
   theme: {
@@ -13,7 +11,7 @@ export default createVuetify({
       light: {
         colors: {
           primary: "#00ADA4",
-          secondary: "#AD3C00",
+          secondary: "#f5f5f5",
           accent: "#ff5722",
           error: "#f44336",
           warning: "#ffc107",

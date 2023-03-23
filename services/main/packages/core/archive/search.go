@@ -11,11 +11,14 @@
 package archive
 
 import (
-	"database/sql"
 	"fmt"
 
 	scan "wrs/tk/packages/generics/rows"
 
+	// "wrs/tk/packages/generics/slice"
+	"github.com/jackc/pgtype"
+
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -60,11 +63,12 @@ func ParseMethod(key string) SearchMethod {
 }
 
 type ArchiveDistance struct {
-	ArchiveID        int64          `db:"archive_id"`
-	ArchiveName      string         `db:"name"`
-	Sha1             sql.NullString `db:"checksum_sha1"`
-	FileCollectionID int64          `db:"file_collection_id"`
-	Distance         int64          `db:"distance"`
+	// Sha256 [32]byte `db:"sha256"`
+	Sha256         []byte           `db:"sha256"`
+	PartID         uuid.UUID        `db:"part_id"`
+	ArchiveAliases pgtype.TextArray `db:"names"` // TODO is this necessary here?
+	MatchedName    string           `db:"name"`
+	Distance       int64            `db:"distance"`
 }
 
 func (controller ArchiveController) SearchForArchiveAll(query string, method SearchMethod) ([]ArchiveDistance, error) {
@@ -95,22 +99,25 @@ func (controller ArchiveController) searchForArchive(query string, method Search
 	var values []interface{}
 	switch method {
 	case METHOD_SUBSTRING:
-		sql = fmt.Sprintf("SELECT a.id as achive_id, a.name, a.checksum_sha1, c.id as file_collection_id, " +
-			"FROM file_collection c INNER JOIN archive a ON a.file_collection_id=c.id WHERE a.name LIKE $1::text ORDER BY a.name")
+		sql = `SELECT a.sha256, a.part_id, archive_alias.name, ARRAY(SELECT name FROM archive_alias WHERE archive_alias.archive_sha256=a.sha256) AS names
+		FROM archive a
+		INNER JOIN archive_alias ON archive_alias.archive_sha256=a.sha256
+		WHERE archive_alias.name LIKE $1::TEXT ORDER BY archive_alias.name`
 		values = []interface{}{fmt.Sprintf("%%%s%%", query)}
 	case METHOD_FAST_LEVENSHTEIN:
-		sql = fmt.Sprintf("SELECT a.id as archive_id, a.name, a.checksum_sha1, c.id as file_collection_id, " +
-			"levenshtein(a.name, $2, 10, 1, 100) as distance " +
-			"FROM file_collection c INNER JOIN archive a ON a.file_collection_id=c.id WHERE a.name LIKE $1::text ORDER BY distance")
+		sql = `SELECT a.sha256, a.part_id, archive_alias.name, ARRAY(SELECT name FROM archive_alias WHERE archive_alias.archive_sha256=a.sha256) AS names,
+		levenshtein(archive_alias.name, $2, 10, 1, 100) AS distance
+		FROM archive a
+		INNER JOIN archive_alias ON archive_alias.archive_sha256=a.sha256
+		WHERE archive_alias.name LIKE $1::TEXT ORDER BY distance`
 		values = []interface{}{fmt.Sprintf("%%%s%%", query), query}
 	case METHOD_LEVENSHTEIN:
-		sql = fmt.Sprintf("SELECT a.id as archive_id, a.name, a.checksum_sha1, c.id as file_collection_id, " +
-			"levenshtein(a.name, $1, 10, 1, 100) as distance " +
-			"FROM file_collection c INNER JOIN archive a ON a.file_collection_id=c.id ORDER BY distance")
+		sql = `SELECT a.sha256, a.part_id, archive_alias.name, ARRAY(SELECT name FROM archive_alias WHERE archive_alias.archive_sha256=a.sha256) AS names,
+		levenshtein(archive_alias.name, $1, 10, 1, 100) AS distance
+		FROM archive a
+		INNER JOIN archive_alias ON archive_alias.archive_sha256=a.sha256
+		ORDER BY distance`
 		values = []interface{}{query}
-		for _, v := range values {
-			fmt.Printf("v: %s\n", v)
-		}
 	default:
 		msg := fmt.Sprintf("Method %s not recognized", SearchMethodString(method))
 		return nil, errors.New(msg)

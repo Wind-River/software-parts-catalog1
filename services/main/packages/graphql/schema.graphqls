@@ -3,37 +3,81 @@
 # https://gqlgen.com/getting-started/
 
 type Query {
+  # test_archive is not implemented and should probably be removed
   test_archive: Archive!
-  archive(id: Int64, sha256: String, sha1: String, name: String): Archive
+  # archive returns the archive matching the given sha256 exactly, or matching the given name exactly if sha256 was not given or found
+  archive(sha256: String, name: String): Archive
+  # find_archive searches the database for archives with names like the given query
   find_archive(query: String!, method: String): [ArchiveDistance!]!
-  file_collection(id: Int64, sha256: String, sha1: String, name: String): FileCollection
-  archives(id: Int64, vcode: String): [Archive!]!
-  file_count(id: Int64, vcode: String): Int64!
+  # part returns the part matching the first matching not nil identifying info 
+  part(id: UUID, file_verification_code: String, sha256: String, sha1: String, name: String): Part
+  # archives list archives pointing to the part identified by part_id or verification code
+  archives(id: UUID, vcode: String): [Archive!]!
+  partlist(id: Int64, name: String): PartList
+  partlist_parts(id: Int64!): [Part]!
+  partlists(parent_id: Int64!): [PartList]!
+  # file_count returns the number of files owned by the given part and its sub-parts
+  file_count(id: UUID, vcode: String): Int64!
+  # comprised returns the list of parts that are comprised by the given part
+  # see Part.comprised if you are looking for what comprises a given part
+  comprised(id: UUID): [Part!]!
+  # profile returns a list of both document types, with an optional title field
+  profile(id: UUID, key: String): [Document!]
 }
 
 scalar Upload
 
+input PartInput {
+  id: UUID!
+  type: String
+  name: String
+  version: String
+  family_name: String
+  file_verification_code: String
+  license: String
+  license_rationale: String
+  license_notice: String
+  automation_license: String
+  automation_license_rationale: String
+  comprised: UUID
+}
+
 type Mutation {
+  addPartList(name: String!, parent_id: Int64): PartList!
+  deletePartList(id: Int64!): PartList!
+  # Upload an archive to be processed into a part
   uploadArchive(file: Upload!, name: String): UploadedArchive!
+  # Updates the part associated with the given archive
+  # An error will be returned if the associated part hasn't been created yet
   updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
-  updateFileCollection(verificationCode: String!, license: String, licenseRationale: String, familyString: String): FileCollection
+  updatePartList(id: Int64!, name: String, parts: [UUID]): PartList!
+  # Update the given part with non-nil and non-zero fields
+  updatePart(partInput: PartInput): Part
+  # Create a part alias
+  createAlias(id: UUID!, alias: String!): UUID!
+  # Attach a document to a part
+  # If title is not given, it is a part_has_document, else it is a part_documents entry
+  attachDocument(id: UUID!, key: String!, title: String, document: JSON!): Boolean!
+  # Adds a sub-part to a part at a path
+  partHasPart(parent: UUID!, child: UUID!, path: String!): Boolean!
+  # Adds a fil eto a part, potentially at a path
+  partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
 }
 
 scalar Int64
 scalar Time
+scalar UUID
+scalar JSON
 
 type Archive {
-  id: Int64!
-  file_collection_id: Int64
-  file_collection: FileCollection
-  name: String
-  path: String
-  size: Int64
-  sha1: String
-  sha256: String
+  sha256: String!
+  Size: Int64
+  part_id: UUID
+  part: Part
   md5: String
+  sha1: String
+  name: String
   insert_date: Time!
-  extract_status: Int!
 }
 
 type ArchiveDistance {
@@ -41,31 +85,51 @@ type ArchiveDistance {
   archive: Archive!
 }
 
-type FileCollection {
-  id: Int64
-  insert_date: Time
-  group_container_id: Int64
-  flag_extract: Boolean
-  flag_license_extract: Boolean
-  license_id: Int64
-  license: License
-  license_rationale: String
-  analyst_id: Int64
-  license_expression: String
+type SubPart {
+  path: String!
+  part: Part!
+}
+
+type Part {
+  id: UUID!
+  type: String!
+  name: String
+  version: String
+  family_name: String
+  file_verification_code: String
+  size: Int64
+  license: String
+  license_rationale: JSON
   license_notice: String
-  copyright: String
-  verification_code_one: String
-  verification_code_two: String
+  automation_license: String
+  automation_license_rationale: JSON
+  comprised: UUID
+  aliases: [String!]
+  profiles: [Profile!]
+  sub_parts: [SubPart!]
+}
+
+type PartList {
+  id: Int64!
+  name: String!
+  parent_id: Int64
 }
 
 type License {
-  id: Int64!
   name: String!
-  group_id: Int64
-  group_name: String
 }
 
 type UploadedArchive {
   extracted: Boolean!
   archive: Archive
+}
+
+type Profile {
+  key: String!
+  documents: [Document!]!
+}
+
+type Document {
+  title: String
+  document: JSON!
 }

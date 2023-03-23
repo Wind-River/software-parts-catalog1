@@ -59,12 +59,12 @@ volumes:
   objects:
 secrets:
   db:
-    file: ./default_secrets/db.json
+    file: ./secrets/default_secrets/db.json
   key:
-    file: ./default_secrets/aes.key
+    file: ./secrets/default_secrets/aes.key
   blob:
-    file: ./default_secrets/blob.json
+    file: ./secrets/default_secrets/blob.json
   ssl_certificate:
-    file: ./default_secrets/ssl.crt
+    file: ./secrets/default_secrets/ssl/ssl.crt
   ssl_certificate_key:
-    file: ./default_secrets/ssl_crt.key
+    file: ./secrets/default_secrets/ssl/ssl_crt.key

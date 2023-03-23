@@ -1,2 +1,0 @@
-<!-- Moved to home page -->
-
