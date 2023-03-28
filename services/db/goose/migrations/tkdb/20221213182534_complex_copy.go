@@ -3,6 +3,7 @@
 package tkdb
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/hex"
 	"fmt"
@@ -183,6 +184,10 @@ type OldFilecollection struct {
 func updateFileCollectionVerificationCodes(conn *sql.Tx) error {
 	fileCollectionController := TransactionFileCollectionController{Tx: conn}
 
+	if err := updateCompleteCollections(conn, &fileCollectionController); err != nil {
+		log.Fatal().Err(err).Str("expanded", fmt.Sprintf("%+v", err)).Msg("error updateCompleteCollections")
+	}
+
 	if err := updateCollectionsWithOneButNotTwo(conn, &fileCollectionController); err != nil {
 		log.Fatal().Err(err).Str("expanded", fmt.Sprintf("%+v", err)).Msg("error updateCollectionsWithOneButNotTwo")
 	} else {
@@ -317,6 +322,105 @@ func determineNewestFileCollection(conn *sql.Tx, fileCollectionController *Trans
 		return nil, nil, errors.Wrapf(err, "Both collections are at the same date, so I should calculate archive count for %d and %d",
 			fileCollection.FileCollectionID, other.FileCollectionID)
 	}
+}
+
+func verifyCompleteCollections(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController) error {
+	logger := log.With().Str(zerolog.CallerFieldName, "verifyCompleteCollections").Logger()
+
+	rows, err := conn.Query(`SELECT id 
+	FROM file_collection 
+	WHERE verification_code_two IS NOT NULL 
+	AND verification_code_one IS NOT NULL 
+	ORDER BY id`)
+	if err != nil {
+		return errors.Wrapf(err, "error selecting file_collections to work on")
+	}
+	defer rows.Close()
+
+	collectionsToVerify := make([]int64, 0)
+	for rows.Next() {
+		var tmp int64
+		if err := rows.Scan(&tmp); err != nil {
+			return errors.Wrapf(err, "error scanning file_collection_id")
+		}
+
+		collectionsToVerify = append(collectionsToVerify, tmp)
+	}
+	rows.Close()
+
+	logger.Info().Int("collectionsToVerify", len(collectionsToVerify)).Send()
+
+	for _, fileCollectionID := range collectionsToVerify {
+		// time.Sleep(time.Second)
+		logger.Debug().Int64("fileCollectionID", fileCollectionID).Msg("Starting on File Collection")
+
+		calculatedFvcOne, calculatedFvcTwo, err := fileCollectionController.CalculateFileCollectionVerificationCode(fileCollectionID)
+		if err != nil {
+			return errors.Wrapf(err, "error calculating file verification codes of %d", fileCollectionID)
+		}
+
+		var dataFvcOne, dataFvcTwo []byte
+		if err := conn.QueryRow("SELECT verification_code_one, verification_code_two FROM file_collection WHERE id=$1",
+			fileCollectionID).Scan(&dataFvcOne, &dataFvcTwo); err != nil {
+			return errors.Wrapf(err, "error selecting verification codes")
+		}
+
+		if !bytes.Equal(calculatedFvcOne, dataFvcOne) || !bytes.Equal(calculatedFvcTwo, dataFvcTwo) {
+			logger.Error().Hex("calculatedFvcOne", calculatedFvcOne).Hex("calculatedFvcTwo", calculatedFvcTwo).
+				Hex("dataFvcOne", dataFvcOne).Hex("dataFvcTwo", dataFvcTwo).Msg("FVC mismatch")
+			return errors.New("FVC mismatch")
+		}
+	}
+	logger.Info().Msg("Returning")
+
+	return nil
+}
+
+func updateCompleteCollections(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController) error {
+	logger := log.With().Str(zerolog.CallerFieldName, "updateCompleteCollections").Logger()
+
+	rows, err := conn.Query("SELECT id FROM file_collection WHERE verification_code_two IS NOT NULL AND verification_code_one IS NOT NULL ORDER BY id")
+	if err != nil {
+		return errors.Wrapf(err, "error selecting file_collections to work on")
+	}
+	defer rows.Close()
+
+	collectionsToUpdate := make([]int64, 0)
+	for rows.Next() {
+		var tmp int64
+		if err := rows.Scan(&tmp); err != nil {
+			return errors.Wrapf(err, "error scanning file_collction_id")
+		}
+
+		collectionsToUpdate = append(collectionsToUpdate, tmp)
+	}
+	rows.Close()
+
+	logger.Info().Int("collectionsToUpdate", len(collectionsToUpdate)).Send()
+
+	removedCollections := make(map[int64]bool)
+	for _, fileCollectionID := range collectionsToUpdate {
+		// time.Sleep(time.Second)
+		if removedCollections[fileCollectionID] {
+			logger.Warn().Int64("removed", fileCollectionID).Msg("Skipping Removed Collection")
+			continue
+		}
+		logger.Debug().Int64("fileCollectionID", fileCollectionID).Msg("Starting on File Collection")
+
+		fvcOne, fvcTwo, err := fileCollectionController.CalculateFileCollectionVerificationCode(fileCollectionID)
+		if err != nil {
+			return errors.Wrapf(err, "error calculating file verification codes of %d", fileCollectionID)
+		}
+
+		if removed, err := updateMayConflict(conn, fileCollectionController, fileCollectionID, fvcOne, fvcTwo); err != nil {
+			return errors.Wrapf(err, "error updating file verification code of %d to (%x, %x)", fileCollectionID, fvcOne, fvcTwo)
+		} else if removed > 0 {
+			removedCollections[removed] = true
+		}
+	}
+	logger.Info().Msg("Returning")
+
+	return nil
 }
 
 func updateCollectionsWithOneButNotTwo(conn *sql.Tx, fileCollectionController *TransactionFileCollectionController) error {
@@ -489,9 +593,10 @@ func updateMayConflict(tx *sql.Tx, fileCollectionController *TransactionFileColl
 	logger.Debug().Msg("Resloving generic conflict")
 
 	// move archives from old to new
+	log.Debug().Int64("older.FileCollectionID", older.FileCollectionID).Int64("newer.FileCollectionID", newer.FileCollectionID).Msg("Moving archive_tables")
 	if _, err := tx.Exec("UPDATE archive_table SET file_collection_id=$1 WHERE file_collection_id=$2",
 		newer.FileCollectionID, older.FileCollectionID); err != nil {
-		return 0, errors.Wrapf(err, "error moving archives from %d to %d", older.FileCollectionID, newer.FileCollectionID)
+		return 0, errors.Wrapf(err, "error moving archives from %d to %d", newer.FileCollectionID, older.FileCollectionID)
 	}
 
 	// delete owned file_collection_contains
@@ -702,85 +807,120 @@ func (controller TransactionFileCollectionController) GetByID(fileCollectionID i
 	return &ret, nil
 }
 
+// // processFileCollection catalogs files found at parentDirectory as children of this archive, and recursively processes any sub-packages.
+// // if any file is missing a sha256, the resulting file verification code 2 will be nil
+// func (p *TransactionFileCollectionController) CalculateFileCollectionVerificationCode(fileCollectionID int64) (vcodeOne []byte, vcodeTwo []byte, err error) {
+// 	vcoderOne := code.NewVersionOne().(*code.VersionOneHasher)
+// 	vcoderTwo := code.NewVersionTwo().(*code.VersionTwoHasher)
+
+// 	// Select all files and feed to verification code
+// 	rows, err := p.Tx.Query("SELECT f.checksum_sha1, f.checksum_sha256 "+
+// 		"FROM file_belongs_collection fbc "+
+// 		"INNER JOIN file_table f ON f.id=fbc.file_id "+
+// 		"WHERE fbc.file_collection_id=$1 AND flag_symlink=0 AND flag_fifo=0", fileCollectionID)
+// 	if err != nil {
+// 		return nil, nil, errors.Wrapf(err, "error selecting files of file_collection %d", fileCollectionID)
+// 	}
+// 	defer rows.Close()
+
+// 	for rows.Next() {
+// 		var tmpSha1 sql.NullString
+// 		var tmpSha256 sql.NullString
+// 		if err := rows.Scan(&tmpSha1, &tmpSha256); err != nil {
+// 			return nil, nil, errors.Wrapf(err, "error scanning checksum of files of file_collectior %d", fileCollectionID)
+// 		}
+
+// 		if err := vcoderOne.AddSha1Hex(tmpSha1.String); err != nil {
+// 			return nil, nil, err
+// 		}
+// 		if vcoderTwo != nil {
+// 			if !tmpSha256.Valid {
+// 				vcoderTwo = nil
+// 			} else {
+// 				if err := vcoderTwo.AddSha256Hex(tmpSha256.String); err != nil {
+// 					return nil, nil, err
+// 				}
+// 			}
+// 		}
+// 	}
+// 	rows.Close()
+
+// 	fcg, err := NewFileCollectionGraph(p.Tx, fileCollectionID)
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
+
+// 	if len(fcg.Edges) > 0 {
+// 		if err := fcg.TraverseUniqueEdges(func(collectionID int64) error {
+// 			// Select all files and feed to verification code
+// 			rows, err = p.Tx.Query("SELECT f.checksum_sha1, f.checksum_sha256 "+
+// 				"FROM file_belongs_collection fbc "+
+// 				"INNER JOIN file_table f ON f.id=fbc.file_id "+
+// 				"WHERE fbc.file_collection_id=$1", collectionID)
+// 			if err != nil {
+// 				return errors.Wrapf(err, "error selecting files of collection %d", collectionID)
+// 			}
+// 			defer rows.Close()
+
+// 			for rows.Next() {
+// 				var tmpSha1 sql.NullString
+// 				var tmpSha256 sql.NullString
+// 				if err := rows.Scan(&tmpSha1, &tmpSha256); err != nil {
+// 					return errors.Wrapf(err, "error scanning checksums of files of collection %d", collectionID)
+// 				}
+
+// 				if err := vcoderOne.AddSha1Hex(tmpSha1.String); err != nil {
+// 					return err
+// 				}
+// 				if vcoderTwo != nil {
+// 					if !tmpSha256.Valid {
+// 						vcoderTwo = nil
+// 					} else {
+// 						if err := vcoderTwo.AddSha256Hex(tmpSha256.String); err != nil {
+// 							return err
+// 						}
+// 					}
+// 				}
+// 			}
+
+// 			return nil
+// 		}); err != nil {
+// 			return nil, nil, err
+// 		}
+// 	}
+
+// 	fvcOne := vcoderOne.Sum()
+// 	var fvcTwo []byte
+// 	if vcoderTwo != nil {
+// 		fvcTwo = vcoderTwo.Sum()
+// 	}
+// 	return fvcOne, fvcTwo, nil
+// }
+
 // processFileCollection catalogs files found at parentDirectory as children of this archive, and recursively processes any sub-packages.
 // if any file is missing a sha256, the resulting file verification code 2 will be nil
 func (p *TransactionFileCollectionController) CalculateFileCollectionVerificationCode(fileCollectionID int64) (vcodeOne []byte, vcodeTwo []byte, err error) {
-	vcoderOne := code.NewVersionOne().(*code.VersionOneHasher)
-	vcoderTwo := code.NewVersionTwo().(*code.VersionTwoHasher)
-
-	// Select all files and feed to verification code
-	rows, err := p.Tx.Query("SELECT f.checksum_sha1, f.checksum_sha256 "+
-		"FROM file_belongs_collection fbc "+
-		"INNER JOIN file_table f ON f.id=fbc.file_id "+
-		"WHERE fbc.file_collection_id=$1 AND flag_symlink=0 AND flag_fifo=0", fileCollectionID)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "error selecting files of file_collection %d", fileCollectionID)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var tmpSha1 sql.NullString
-		var tmpSha256 sql.NullString
-		if err := rows.Scan(&tmpSha1, &tmpSha256); err != nil {
-			return nil, nil, errors.Wrapf(err, "error scanning checksum of files of file_collectior %d", fileCollectionID)
-		}
-
-		if err := vcoderOne.AddSha1Hex(tmpSha1.String); err != nil {
-			return nil, nil, err
-		}
-		if vcoderTwo != nil {
-			if !tmpSha256.Valid {
-				vcoderTwo = nil
-			} else {
-				if err := vcoderTwo.AddSha256Hex(tmpSha256.String); err != nil {
-					return nil, nil, err
-				}
-			}
-		}
-	}
-	rows.Close()
-
-	fcg, err := NewFileCollectionGraph(p.Tx, fileCollectionID)
+	sha1s, sha256s, err := p.CollectShas(fileCollectionID)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(fcg.Edges) > 0 {
-		if err := fcg.TraverseUniqueEdges(func(collectionID int64) error {
-			// Select all files and feed to verification code
-			rows, err = p.Tx.Query("SELECT f.checksum_sha1, f.checksum_sha256 "+
-				"FROM file_belongs_collection fbc "+
-				"INNER JOIN file_table f ON f.id=fbc.file_id "+
-				"WHERE fbc.file_collection_id=$1", collectionID)
-			if err != nil {
-				return errors.Wrapf(err, "error selecting files of collection %d", collectionID)
-			}
-			defer rows.Close()
+	vcoderOne := code.NewVersionOne().(*code.VersionOneHasher)
+	var vcoderTwo *code.VersionTwoHasher
+	if sha256s != nil {
+		vcoderTwo = code.NewVersionTwo().(*code.VersionTwoHasher)
+	}
 
-			for rows.Next() {
-				var tmpSha1 sql.NullString
-				var tmpSha256 sql.NullString
-				if err := rows.Scan(&tmpSha1, &tmpSha256); err != nil {
-					return errors.Wrapf(err, "error scanning checksums of files of collection %d", collectionID)
-				}
-
-				if err := vcoderOne.AddSha1Hex(tmpSha1.String); err != nil {
-					return err
-				}
-				if vcoderTwo != nil {
-					if !tmpSha256.Valid {
-						vcoderTwo = nil
-					} else {
-						if err := vcoderTwo.AddSha256Hex(tmpSha256.String); err != nil {
-							return err
-						}
-					}
-				}
-			}
-
-			return nil
-		}); err != nil {
+	for _, v := range sha1s {
+		if err := vcoderOne.AddSha1Hex(v); err != nil {
 			return nil, nil, err
+		}
+	}
+	if vcoderTwo != nil {
+		for _, v := range sha256s {
+			if err := vcoderTwo.AddSha256Hex(v); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 
@@ -789,7 +929,73 @@ func (p *TransactionFileCollectionController) CalculateFileCollectionVerificatio
 	if vcoderTwo != nil {
 		fvcTwo = vcoderTwo.Sum()
 	}
+
 	return fvcOne, fvcTwo, nil
+}
+
+func (p *TransactionFileCollectionController) CollectShas(fileCollectionID int64) (sha1s []string, sha256s []string, err error) {
+	sha1s = make([]string, 0)
+	sha256s = make([]string, 0)
+
+	rows, err := p.Tx.Query(`SELECT f.checksum_sha1, f.checksum_sha256 FROM file_table f
+	INNER JOIN file_belongs_collection fbc ON file_id=f.id
+	WHERE fbc.file_collection_id=$1`, fileCollectionID)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "error selecting files of file_collection")
+	}
+	defer rows.Close()
+
+	// collect all direct files
+	for rows.Next() {
+		var tmpSha1 string
+		var tmpSha256 sql.NullString
+		if err := rows.Scan(&tmpSha1, &tmpSha256); err != nil {
+			return nil, nil, errors.Wrapf(err, "error selecting shas of file")
+		}
+
+		sha1s = append(sha1s, tmpSha1)
+		if sha256s != nil {
+			if tmpSha256.Valid {
+				sha256s = append(sha256s, tmpSha256.String)
+			} else {
+				sha256s = nil
+			}
+		}
+	}
+	rows.Close()
+
+	// collect all sub files
+	rows, err = p.Tx.Query("SELECT child_id FROM file_collection_contains WHERE parent_id=$1",
+		fileCollectionID)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, nil, errors.Wrapf(err, "error selecting sub collections")
+	}
+	defer rows.Close()
+
+	subCollections := make([]int64, 0)
+	for rows.Next() {
+		var tmp int64
+		if err := rows.Scan(&tmp); err != nil {
+			return nil, nil, errors.Wrapf(err, "error scanning sub collections")
+		}
+
+		subCollections = append(subCollections, tmp)
+	}
+	rows.Close()
+
+	for _, v := range subCollections {
+		subSha1s, subSha256s, err := p.CollectShas(v)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		sha1s = append(sha1s, subSha1s...)
+		if sha256s != nil && subSha256s != nil {
+			sha256s = append(sha256s, subSha256s...)
+		}
+	}
+
+	return sha1s, sha256s, nil
 }
 
 func NewFileCollectionGraph(db *sql.Tx, fileCollectionID int64) (*file_collection.FileCollectionGraph, error) {
