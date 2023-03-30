@@ -64,10 +64,16 @@ type Archive = {
   part: Part
 }
 type Part = {
+  id: string
   file_verification_code: string
+  type: string
+  name: string
+  version: string
+  family_name: string
   license: string
   license_rationale: string
   license_notice: string
+  comprised: string
 }
 
 //Various refs used in file upload processing
@@ -87,6 +93,7 @@ const uploadMutation = useMutation(`
         sha1
         Size
         md5
+        insert_date
         part_id
         part{
           id
@@ -120,6 +127,7 @@ const archiveQuery = useQuery({
       sha1
       Size
       md5
+      insert_date
       part_id
       part{
         id
@@ -162,6 +170,12 @@ async function processIncomplete() {
 async function retrieveArchive(name: string) {
   currentName.value = name
   await archiveQuery.executeQuery()
+  if (queryResponse.value.archive === null) {
+    retrieveArchive(name)
+  }
+  if (queryResponse.value.archive.name === null) {
+    retrieveArchive(name)
+  }
   if (queryResponse.value.archive.name === name) {
     return queryResponse.value.archive
   }
@@ -171,23 +185,25 @@ async function retrieveArchive(name: string) {
   if (queryFetching.value) {
     console.log(queryFetching.value)
   }
-  if (queryResponse.value.archive === null) {
-    retrieveArchive(name)
-  }
   return
 }
 
 //Converts returned archive and part data into downloadable csv
 function convertToCSV(arr: Archive[]) {
   const array = [
-    "name",
+    "file_name",
     "insert_date",
     "checksum",
-    "verification_code",
+    "part_id",
+    "file_verification_code",
+    "type",
+    "name",
+    "version",
+    "family_name",
     "license",
     "license_rationale",
     "license_notice",
-    "copyright",
+    "comprised",
     "\n",
   ]
 
@@ -198,10 +214,16 @@ function convertToCSV(arr: Archive[]) {
           archive.name,
           archive.insert_date,
           archive.sha256 ? archive.sha256 : archive.sha1,
+          archive.part.id,
           archive.part.file_verification_code,
+          archive.part.type,
+          archive.part.name,
+          archive.part.version,
+          archive.part.family_name,
           archive.part.license,
           archive.part.license_rationale,
           archive.part.license_notice,
+          archive.part.comprised,
         ].toString()
       } else
         return [

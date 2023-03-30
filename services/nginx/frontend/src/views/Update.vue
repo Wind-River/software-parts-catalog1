@@ -23,8 +23,8 @@
         </thead>
         <tbody>
           <tr v-for="(csv, index) in uploadedCSV" :key="index">
-            <td>{{ csv.name }}</td>
-            <td>{{ csv.verification_code }}</td>
+            <td>{{ csv.file_name }}</td>
+            <td>{{ csv.file_verification_code }}</td>
             <td>{{ csv.license }}</td>
             <td>{{ csv.license_rationale }}</td>
           </tr>
@@ -50,13 +50,31 @@ import Upload from "@/components/Upload.vue"
 //Defines the structure of an update csv file
 type UpdateCSV = {
   checksum: string
-  copyright: string
+  comprised: string
+  family_name: string
+  file_name: string
+  file_verification_code: string
   insert_date: string
   license: string
   license_notice: string
   license_rationale: string
   name: string
-  verification_code: string
+  part_id: string
+  type: string
+  version: string
+}
+
+type PartInput = {
+  id: string
+  type?: string
+  name?: string
+  version?: string
+  family_name?: string
+  file_verification_code: string
+  license?: string
+  license_rationale?: string
+  license_notice?: string
+  comprised?: string
 }
 
 //Handles csv files and related processing elements
@@ -67,12 +85,10 @@ const dialogMessage: Ref<string> = ref("Uploaded CSV has completed processing.")
 
 //Updates the part record within the catalog
 const updateMutation = useMutation(`
-  mutation($partID: UUID!, $verificationCode: String, $license: String, $licenseRationale: String){
-    updatePart(partID: $partID, verificationCode: $verificationCode, license: $license, licenseRationale: $licenseRationale, 
-    familyString: $familyString){
-      verification_code_one
-      verification_code_two
-      license_expression
+  mutation($partInput: PartInput!){
+    updatePart(partInput: $partInput){
+      file_verification_code
+      license
       license_rationale
     }
   }
@@ -104,28 +120,38 @@ function csvToArray(csvString: string): UpdateCSV[] {
   const rows = csvString.slice(csvString.indexOf("\n") + 1).split("\n")
   const arr = rows.reduce((arr: UpdateCSV[], row: string) => {
     const fields = row.split(",")
-    const name = fields[0]
+    const file_name = fields[0]
     const insert_date = fields[1]
     const checksum = fields[2]
-    const verification_code = fields[3]
-    const license = fields[4]
-    const license_rationale = fields[5]
-    const license_notice = fields[6]
-    const copyright = fields[7]
+    const part_id = fields[3]
+    const file_verification_code = fields[4]
+    const type = fields[5]
+    const name = fields[6]
+    const version = fields[7]
+    const family_name = fields[8]
+    const license = fields[9]
+    const license_rationale = fields[10]
+    const license_notice = fields[11]
+    const comprised = fields[12]
     arr.push({
-      name,
+      file_name,
       insert_date,
       checksum,
-      verification_code,
+      part_id,
+      file_verification_code,
+      type,
+      name,
+      version,
+      family_name,
       license,
       license_rationale,
       license_notice,
-      copyright,
+      comprised,
     })
     return arr
   }, [])
   return arr.filter((value) => {
-    return value.name !== ""
+    return value.file_name !== ""
   })
 }
 
@@ -139,14 +165,43 @@ async function handleUpload(files: File[]) {
     })
   }
   for (const csv of uploadedCSV.value) {
-    if (csv.verification_code === undefined || "") {
+    if (csv.file_verification_code === undefined || "") {
       dialogMessage.value = "Verification code required to update parts."
     } else {
+      let updatePartInput: PartInput = {
+        id: csv.part_id,
+        file_verification_code: csv.file_verification_code,
+      }
+      if (csv.type) {
+        updatePartInput.type = csv.type
+      }
+      if (csv.name) {
+        updatePartInput.name = csv.name
+      }
+      if (csv.version) {
+        updatePartInput.version = csv.version
+      }
+      if (csv.family_name) {
+        updatePartInput.family_name = csv.family_name
+      }
+      if (csv.license) {
+        updatePartInput.license = csv.license
+      }
+      if (csv.license_rationale) {
+        updatePartInput.license_rationale = csv.license_rationale
+      }
+      if (csv.license_notice) {
+        updatePartInput.license_notice = csv.license_notice
+      }
+      if (
+        csv.comprised &&
+        csv.comprised !== "00000000-0000-0000-0000-000000000000"
+      ) {
+        updatePartInput.comprised = csv.comprised
+      }
       updateMutation
         .executeMutation({
-          verificationCode: csv.verification_code,
-          license: csv.license,
-          licenseRationale: csv.license_rationale,
+          partInput: updatePartInput,
         })
         .then((result) => {
           if (

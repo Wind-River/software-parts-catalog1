@@ -29,7 +29,15 @@
       v-if="partFetching"
     ></v-progress-circular>
     <h3 v-if="partError">{{ partError }}</h3>
-    <h2 v-if="partData" class="mb-6">{{ partData.part.name }}</h2>
+    <h2 v-if="partData" class="mb-6">
+      {{ partData.part.name }}
+      <v-icon
+        v-if="partData.part.aliases.length > 0"
+        color="primary"
+        style="cursor: pointer"
+        >mdi-menu-right</v-icon
+      >
+    </h2>
     <v-card v-if="partData">
       <v-row>
         <v-col cols="8" class="pe-0">
@@ -108,24 +116,33 @@
       </v-row>
     </v-card>
 
-    <h3
-      class="my-4"
-      v-if="
-        partData &&
-        partData.part.comprised &&
-        partData.part.comprised !== '00000000-0000-0000-0000-000000000000'
-      "
-    >
-      Comprised Of
-      <v-btn
-        size="small"
-        class="ms-2"
-        color="primary"
-        @click="showComprisedParts()"
-        >Show/Hide</v-btn
+    <v-tabs v-model="selectedTab" class="my-4" align-tabs="center">
+      <v-tab
+        v-if="
+          partData &&
+          partData.part.comprised &&
+          partData.part.comprised !== '00000000-0000-0000-0000-000000000000'
+        "
+        value="comprisedTab"
+        selected-class="text-primary"
       >
-    </h3>
-    <v-table v-if="partData && comprisedVisible">
+        Comprised Of</v-tab
+      >
+      <v-tab
+        v-if="partData && partData.part.sub_parts.length > 0"
+        value="subPartsTab"
+        selected-class="text-primary"
+        >Contains</v-tab
+      >
+      <v-tab
+        v-if="partData && partData.archives.length > 0"
+        value="availableArchivesTab"
+        selected-class="text-primary"
+        >Available Archives</v-tab
+      >
+    </v-tabs>
+
+    <v-table v-if="selectedTab === 'comprisedTab'">
       <thead>
         <tr>
           <th class="bg-primary">ID</th>
@@ -148,25 +165,7 @@
       </tbody>
     </v-table>
 
-    <v-divider
-      v-if="
-        partData &&
-        partData.part.comprised &&
-        partData.part.comprised !== '00000000-0000-0000-0000-000000000000'
-      "
-    ></v-divider>
-
-    <h3 class="my-4" v-if="partData && partData.part.sub_parts.length > 0">
-      Contains
-      <v-btn
-        size="small"
-        class="ms-2"
-        color="primary"
-        @click="showContainedParts()"
-        >Show/Hide</v-btn
-      >
-    </h3>
-    <v-table v-if="partData && containedVisible">
+    <v-table v-if="selectedTab === 'subPartsTab'">
       <thead>
         <tr>
           <th class="bg-primary">Name</th>
@@ -189,21 +188,7 @@
       </tbody>
     </v-table>
 
-    <v-divider
-      v-if="partData && partData.part.sub_parts.length > 0"
-    ></v-divider>
-
-    <h3 class="my-4" v-if="partData && partData.archives.length > 0">
-      Available Archives
-      <v-btn
-        size="small"
-        class="ms-2"
-        color="primary"
-        @click="showAvailableArchives()"
-        >Show/Hide</v-btn
-      >
-    </h3>
-    <v-table v-if="partData && availableArchivesVisible">
+    <v-table v-if="selectedTab === 'availableArchivesTab'">
       <thead class="bg-primary">
         <tr>
           <th class="bg-primary">Name</th>
@@ -223,18 +208,13 @@
                 : "SHA1:" + archive.sha1.substring(0, 10) + "..."
             }}
           </td>
-          <td v-if="archive.path != null">
+          <td v-if="archive.sha256 != null">
             <v-btn
-              @click="downloadArchive(archive.id, archive.name)"
+              @click="downloadArchive(archive.sha256, archive.name)"
               variant="tonal"
               color="primary"
               size="small"
             >
-              Download
-            </v-btn>
-          </td>
-          <td v-else>
-            <v-btn size="small" variant="tonal" color="primary">
               Download
             </v-btn>
           </td>
@@ -333,19 +313,7 @@ const partError = fileCollectionQuery.error
 const partFetching = fileCollectionQuery.fetching
 
 //This section handles display of available archives, comprised parts, and contained parts
-const availableArchivesVisible: Ref<boolean> = ref(false)
-const showAvailableArchives = () => {
-  availableArchivesVisible.value = !availableArchivesVisible.value
-}
-const comprisedVisible: Ref<boolean> = ref(false)
-const showComprisedParts = () => {
-  comprisedVisible.value = !comprisedVisible.value
-}
-
-const containedVisible: Ref<boolean> = ref(false)
-const showContainedParts = () => {
-  containedVisible.value = !containedVisible.value
-}
+const selectedTab: Ref<string> = ref("")
 
 // This section handles the copying of file_verification codes on click event
 const copyAlertVisible: Ref<boolean> = ref(false)
@@ -383,11 +351,10 @@ function showProfile(id: string, key: string) {
 }
 
 //Downloads an available archive
-function downloadArchive(id: number, name: string, depth = 0) {
-  // var ok = true
+function downloadArchive(sha256: string, name: string) {
   var ctype = ""
   fetch(
-    new Request(`/api/container/download/${id}`, {
+    new Request(`/api/archive/${sha256}/${name}`, {
       method: "GET",
       mode: "same-origin",
     }),
@@ -402,13 +369,10 @@ function downloadArchive(id: number, name: string, depth = 0) {
       return response.blob()
     })
     .catch((err) => {
-      if (depth < 3) {
-        downloadArchive(id, name, depth + 1)
-      } else {
         error.value = "Unable to retrieve download from server"
         showModal.value = true
       }
-    })
+    )
     .then((blob) => {
       if (blob instanceof Blob) {
         download(blob, name, ctype)
@@ -438,9 +402,7 @@ onBeforeRouteUpdate((to) => {
   }
 
   pid.value = id
-  containedVisible.value = false
-  comprisedVisible.value = false
-  availableArchivesVisible.value = false
+  selectedTab.value = ""
 })
 </script>
 
