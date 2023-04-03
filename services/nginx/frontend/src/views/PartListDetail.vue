@@ -32,6 +32,7 @@
             </td>
           </tr>
         </tbody>
+        <v-btn v-if="parts.partlist_parts.length > 0" color="primary" size="small" @click="downloadCSV">Download CSV</v-btn>
       </v-table>
     </v-card>
     <v-dialog v-model="deleteDialogVisible">
@@ -63,6 +64,7 @@
 <script setup lang="ts">
 import { usePartListStore } from "@/stores/partlist"
 import { useMutation, useQuery } from "@urql/vue"
+import download from "downloadjs";
 import { onBeforeMount, onMounted, ref, Ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
@@ -78,8 +80,17 @@ const partQuery = useQuery({
   query($id: Int64!){
     partlist_parts(id: $id){
       id
+      type
       name
+      version
+      family_name
       file_verification_code
+      size
+      license
+      license_rationale
+      license_notice
+      comprised
+      aliases
     }
     partlist(id: $id){
       name
@@ -133,24 +144,45 @@ function addParts() {
 }
 
 //TODO download part details for all parts in part list
-function downloadCSV() {
-  const arr = parts.value
-
+function convertToCSV(arr: any[]) {
   const array = [
+    "id",
+    "type",
     "name",
-    "insert_date",
-    "checksum",
-    "verification_code",
+    "version",
+    "family_name",
+    "file_verification_code",
     "license",
     "license_rationale",
     "license_notice",
-    "copyright",
+    "comprised",
+    "aliases",
     "\n",
   ]
 
-  const parsedArr = arr.map(() => {}).join("\n")
+  const parsedArr = arr
+    .map((part) => {
+        return [
+          part.id,
+          part.type,
+          part.name,
+          part.version,
+          part.family_name,
+          part.file_verification_code,
+          part.license,
+          part.license_rationale,
+          part.license_notice,
+          part.comprised,
+          part.aliases,
+        ].toString()
+    })
+    .join("\n")
 
   return array.toString() + parsedArr
+}
+
+function downloadCSV() {
+  download(convertToCSV(parts.value.partlist_parts), "tk-prefilled", "text/csv")
 }
 
 //Collects id from route params

@@ -32,11 +32,25 @@
     <h2 v-if="partData" class="mb-6">
       {{ partData.part.name }}
       <v-icon
-        v-if="partData.part.aliases.length > 0"
+        v-if="partData.part.aliases.length > 0 && aliasesVisible === false"
         color="primary"
         style="cursor: pointer"
+        @click="aliasesVisible = true"
         >mdi-menu-right</v-icon
       >
+      <v-icon
+        v-if="aliasesVisible === true"
+        color="primary"
+        style="cursor: pointer"
+        @click="aliasesVisible = false"
+        >mdi-menu-left</v-icon
+      >
+      <v-card v-if="aliasesVisible === true">
+      <v-card-title>Aliases</v-card-title>
+      <v-card-text>
+        <v-list :items="partData.part.aliases"> </v-list>
+      </v-card-text>
+    </v-card>
     </h2>
     <v-card v-if="partData">
       <v-row>
@@ -315,6 +329,9 @@ const partFetching = fileCollectionQuery.fetching
 //This section handles display of available archives, comprised parts, and contained parts
 const selectedTab: Ref<string> = ref("")
 
+//This section handles display of aliases
+const aliasesVisible: Ref<boolean> = ref(false)
+
 // This section handles the copying of file_verification codes on click event
 const copyAlertVisible: Ref<boolean> = ref(false)
 const copyAlertMessage: Ref<string> = ref("")
@@ -369,10 +386,9 @@ function downloadArchive(sha256: string, name: string) {
       return response.blob()
     })
     .catch((err) => {
-        error.value = "Unable to retrieve download from server"
-        showModal.value = true
-      }
-    )
+      error.value = "Unable to retrieve download from server"
+      showModal.value = true
+    })
     .then((blob) => {
       if (blob instanceof Blob) {
         download(blob, name, ctype)

@@ -88,7 +88,6 @@ const uploadMutation = useMutation(`
   mutation($file: Upload!){
     uploadArchive(file: $file){
       archive{
-        name
         sha256
         sha1
         Size
@@ -122,7 +121,6 @@ const archiveQuery = useQuery({
   query: `
   query($archiveName: String){
     archive(name: $archiveName){
-      name
       sha256
       sha1
       Size
@@ -156,6 +154,7 @@ const queryFetching = archiveQuery.fetching
 async function processIncomplete() {
   for (const name of incompleteUploads.value) {
     const result = await retrieveArchive(name)
+    result.name = name
     uploadedArchives.value.push(result)
   }
   processing.value = false
@@ -173,17 +172,14 @@ async function retrieveArchive(name: string) {
   if (queryResponse.value.archive === null) {
     retrieveArchive(name)
   }
-  if (queryResponse.value.archive.name === null) {
-    retrieveArchive(name)
-  }
-  if (queryResponse.value.archive.name === name) {
-    return queryResponse.value.archive
-  }
   if (queryError.value) {
     console.log(queryError.value)
   }
   if (queryFetching.value) {
     console.log(queryFetching.value)
+  }
+  if (queryResponse.value.archive) {
+    return queryResponse.value.archive
   }
   return
 }
@@ -267,7 +263,9 @@ async function handleUpload(files: File[]) {
       })
       .then((value) => {
         if (value.data.uploadArchive.archive) {
-          uploadedArchives.value.push(value.data.uploadArchive.archive)
+          const uploadedArchive = value.data.uploadArchive.archive
+          uploadedArchive.name = file.name
+          uploadedArchives.value.push(uploadedArchive)
         }
       })
   }
