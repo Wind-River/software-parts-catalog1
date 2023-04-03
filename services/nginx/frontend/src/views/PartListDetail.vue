@@ -23,7 +23,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="parts && parts.partlist_parts" v-for="(item, index) in parts.partlist_parts" :key="index">
+          <tr v-if="parts && parts.partlist_parts.length > 0" v-for="(item, index) in parts.partlist_parts" :key="index">
             <td>{{ item.name }}</td>
             <td>{{ item.file_verification_code.substring(14,24) }}</td>
             <td>
@@ -32,7 +32,7 @@
             </td>
           </tr>
         </tbody>
-        <v-btn v-if="parts.partlist_parts.length > 0" color="primary" size="small" @click="downloadCSV">Download CSV</v-btn>
+        <v-btn v-if="parts && parts.partlist_parts.length > 0" color="primary" size="small" @click="downloadCSV">Download CSV</v-btn>
       </v-table>
     </v-card>
     <v-dialog v-model="deleteDialogVisible">
@@ -146,12 +146,12 @@ function addParts() {
 //TODO download part details for all parts in part list
 function convertToCSV(arr: any[]) {
   const array = [
-    "id",
+    "part_id",
+    "file_verification_code",
     "type",
     "name",
     "version",
     "family_name",
-    "file_verification_code",
     "license",
     "license_rationale",
     "license_notice",
@@ -164,11 +164,11 @@ function convertToCSV(arr: any[]) {
     .map((part) => {
         return [
           part.id,
+          part.file_verification_code,
           part.type,
           part.name,
           part.version,
           part.family_name,
-          part.file_verification_code,
           part.license,
           part.license_rationale,
           part.license_notice,

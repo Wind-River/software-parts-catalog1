@@ -15,7 +15,7 @@
           {{ processedFiles + "/" + fileCount }}
         </div>
       </v-card>
-      <v-table v-if="uploadedArchives.length > 0" class="ma-4">
+      <v-table v-if="uploadedArchives.length > 0 || incompleteUploads.length > 0" class="ma-4">
         <thead>
           <tr>
             <th>{{ processedFiles + "/" + fileCount }}</th>
@@ -33,6 +33,15 @@
               <v-icon color="primary">{{
                 archive.part ? "mdi-check" : "mdi-update"
               }}</v-icon>
+            </td>
+          </tr>
+          <tr v-for="(name, index) in incompleteUploads" :key="index">
+            <td>{{ name }}</td>
+            <td></td>
+            <td>
+              <v-icon color="primary">
+                mdi-update
+              </v-icon>
             </td>
           </tr>
         </tbody>
@@ -74,6 +83,7 @@ type Part = {
   license_rationale: string
   license_notice: string
   comprised: string
+  aliases: string[]
 }
 
 //Various refs used in file upload processing
@@ -108,6 +118,7 @@ const uploadMutation = useMutation(`
           automation_license
           automation_license_rationale
           comprised
+          aliases
         }
       }
     }
@@ -141,6 +152,7 @@ const archiveQuery = useQuery({
         automation_license
         automation_license_rationale
         comprised
+        aliases
       }
     }
   }`,
@@ -154,7 +166,6 @@ const queryFetching = archiveQuery.fetching
 async function processIncomplete() {
   for (const name of incompleteUploads.value) {
     const result = await retrieveArchive(name)
-    result.name = name
     uploadedArchives.value.push(result)
   }
   processing.value = false
@@ -179,6 +190,7 @@ async function retrieveArchive(name: string) {
     console.log(queryFetching.value)
   }
   if (queryResponse.value.archive) {
+    queryResponse.value.archive.name = name
     return queryResponse.value.archive
   }
   return
@@ -187,9 +199,6 @@ async function retrieveArchive(name: string) {
 //Converts returned archive and part data into downloadable csv
 function convertToCSV(arr: Archive[]) {
   const array = [
-    "file_name",
-    "insert_date",
-    "checksum",
     "part_id",
     "file_verification_code",
     "type",
@@ -200,6 +209,7 @@ function convertToCSV(arr: Archive[]) {
     "license_rationale",
     "license_notice",
     "comprised",
+    "aliases",
     "\n",
   ]
 
@@ -207,9 +217,6 @@ function convertToCSV(arr: Archive[]) {
     .map((archive) => {
       if (archive.part !== null) {
         return [
-          archive.name,
-          archive.insert_date,
-          archive.sha256 ? archive.sha256 : archive.sha1,
           archive.part.id,
           archive.part.file_verification_code,
           archive.part.type,
@@ -220,13 +227,9 @@ function convertToCSV(arr: Archive[]) {
           archive.part.license_rationale,
           archive.part.license_notice,
           archive.part.comprised,
+          archive.part.aliases,
         ].toString()
-      } else
-        return [
-          archive.name,
-          archive.insert_date,
-          archive.sha256 ? archive.sha256 : archive.sha1,
-        ]
+      } else return
     })
     .join("\n")
 
@@ -243,7 +246,6 @@ function downloadCSV() {
 async function handleUpload(files: File[]) {
   processing.value = true
   fileCount.value += files.length
-  let retry = false
   for (const file of files) {
     processedFiles.value++
     await uploadMutation
@@ -256,7 +258,6 @@ async function handleUpload(files: File[]) {
             "[GraphQL] the requested element is null which the schema does not allow"
           ) {
             incompleteUploads.value.push(file.name)
-            retry = true
           }
         }
         return value
@@ -268,15 +269,13 @@ async function handleUpload(files: File[]) {
           uploadedArchives.value.push(uploadedArchive)
         }
       })
-  }
-  if (retry) {
-    processIncomplete()
-  } else {
     processing.value = false
     if (pid.value != undefined) {
       addToPartList(uploadedArchives.value)
     }
-    showDialog.value = true
+    if( uploadedArchives.value.length > 0){
+      showDialog.value = true
+    }
   }
 }
 

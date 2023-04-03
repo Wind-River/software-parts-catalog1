@@ -17,16 +17,13 @@
           <tr>
             <th>Name</th>
             <th>Verification Code</th>
-            <th>License</th>
-            <th>Rationale</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(csv, index) in uploadedCSV" :key="index">
-            <td>{{ csv.file_name }}</td>
+            <td>{{ csv.name }}</td>
             <td>{{ csv.file_verification_code }}</td>
-            <td>{{ csv.license }}</td>
-            <td>{{ csv.license_rationale }}</td>
+            <td><v-icon>mdi-check</v-icon></td>
           </tr>
         </tbody>
       </v-table>
@@ -49,12 +46,10 @@ import Upload from "@/components/Upload.vue"
 
 //Defines the structure of an update csv file
 type UpdateCSV = {
-  checksum: string
+  aliases: string[]
   comprised: string
   family_name: string
-  file_name: string
   file_verification_code: string
-  insert_date: string
   license: string
   license_notice: string
   license_rationale: string
@@ -75,6 +70,7 @@ type PartInput = {
   license_rationale?: string
   license_notice?: string
   comprised?: string
+  aliases?: string
 }
 
 //Handles csv files and related processing elements
@@ -120,23 +116,18 @@ function csvToArray(csvString: string): UpdateCSV[] {
   const rows = csvString.slice(csvString.indexOf("\n") + 1).split("\n")
   const arr = rows.reduce((arr: UpdateCSV[], row: string) => {
     const fields = row.split(",")
-    const file_name = fields[0]
-    const insert_date = fields[1]
-    const checksum = fields[2]
-    const part_id = fields[3]
-    const file_verification_code = fields[4]
-    const type = fields[5]
-    const name = fields[6]
-    const version = fields[7]
-    const family_name = fields[8]
-    const license = fields[9]
-    const license_rationale = fields[10]
-    const license_notice = fields[11]
-    const comprised = fields[12]
+    const part_id = fields[0]
+    const file_verification_code = fields[1]
+    const type = fields[2]
+    const name = fields[3]
+    const version = fields[4]
+    const family_name = fields[5]
+    const license = fields[6]
+    const license_rationale = fields[7]
+    const license_notice = fields[8]
+    const comprised = fields[9]
+    const aliases = fields.slice(10)
     arr.push({
-      file_name,
-      insert_date,
-      checksum,
       part_id,
       file_verification_code,
       type,
@@ -147,12 +138,11 @@ function csvToArray(csvString: string): UpdateCSV[] {
       license_rationale,
       license_notice,
       comprised,
+      aliases,
     })
     return arr
   }, [])
-  return arr.filter((value) => {
-    return value.file_name !== ""
-  })
+  return arr.filter((value) => value.part_id !== "")
 }
 
 //Function parses csv into processable format and then executes mutations
