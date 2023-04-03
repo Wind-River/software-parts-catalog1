@@ -270,7 +270,7 @@ async function handleUpload(files: File[]) {
         }
       })
     processing.value = false
-    if (pid.value != undefined) {
+    if (pid.value != undefined && uploadedArchives.value.length > 0) {
       addToPartList(uploadedArchives.value)
     }
     if( uploadedArchives.value.length > 0){
@@ -322,6 +322,5 @@ onBeforeMount(function () {
   }
 
   pid.value = parseInt(id)
-  console.log(pid.value)
 })
 </script>
