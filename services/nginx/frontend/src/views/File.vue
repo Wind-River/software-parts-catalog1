@@ -15,7 +15,7 @@
           {{ processedFiles + "/" + fileCount }}
         </div>
       </v-card>
-      <v-table v-if="uploadedArchives.length > 0" class="ma-4">
+      <v-table v-if="uploadedArchives.length > 0 || incompleteUploads.length > 0" class="ma-4">
         <thead>
           <tr>
             <th>{{ processedFiles + "/" + fileCount }}</th>
@@ -33,6 +33,15 @@
               <v-icon color="primary">{{
                 archive.part ? "mdi-check" : "mdi-update"
               }}</v-icon>
+            </td>
+          </tr>
+          <tr v-for="(name, index) in incompleteUploads" :key="index">
+            <td>{{ name }}</td>
+            <td></td>
+            <td>
+              <v-icon color="primary">
+                mdi-update
+              </v-icon>
             </td>
           </tr>
         </tbody>
@@ -64,10 +73,17 @@ type Archive = {
   part: Part
 }
 type Part = {
+  id: string
   file_verification_code: string
+  type: string
+  name: string
+  version: string
+  family_name: string
   license: string
   license_rationale: string
   license_notice: string
+  comprised: string
+  aliases: string[]
 }
 
 //Various refs used in file upload processing
@@ -82,11 +98,11 @@ const uploadMutation = useMutation(`
   mutation($file: Upload!){
     uploadArchive(file: $file){
       archive{
-        name
         sha256
         sha1
         Size
         md5
+        insert_date
         part_id
         part{
           id
@@ -102,6 +118,7 @@ const uploadMutation = useMutation(`
           automation_license
           automation_license_rationale
           comprised
+          aliases
         }
       }
     }
@@ -115,11 +132,11 @@ const archiveQuery = useQuery({
   query: `
   query($archiveName: String){
     archive(name: $archiveName){
-      name
       sha256
       sha1
       Size
       md5
+      insert_date
       part_id
       part{
         id
@@ -135,6 +152,7 @@ const archiveQuery = useQuery({
         automation_license
         automation_license_rationale
         comprised
+        aliases
       }
     }
   }`,
@@ -162,8 +180,8 @@ async function processIncomplete() {
 async function retrieveArchive(name: string) {
   currentName.value = name
   await archiveQuery.executeQuery()
-  if (queryResponse.value.archive.name === name) {
-    return queryResponse.value.archive
+  if (queryResponse.value.archive === null) {
+    retrieveArchive(name)
   }
   if (queryError.value) {
     console.log(queryError.value)
@@ -171,8 +189,9 @@ async function retrieveArchive(name: string) {
   if (queryFetching.value) {
     console.log(queryFetching.value)
   }
-  if (queryResponse.value.archive === null) {
-    retrieveArchive(name)
+  if (queryResponse.value.archive) {
+    queryResponse.value.archive.name = name
+    return queryResponse.value.archive
   }
   return
 }
@@ -180,14 +199,17 @@ async function retrieveArchive(name: string) {
 //Converts returned archive and part data into downloadable csv
 function convertToCSV(arr: Archive[]) {
   const array = [
+    "part_id",
+    "file_verification_code",
+    "type",
     "name",
-    "insert_date",
-    "checksum",
-    "verification_code",
+    "version",
+    "family_name",
     "license",
     "license_rationale",
     "license_notice",
-    "copyright",
+    "comprised",
+    "aliases",
     "\n",
   ]
 
@@ -195,20 +217,19 @@ function convertToCSV(arr: Archive[]) {
     .map((archive) => {
       if (archive.part !== null) {
         return [
-          archive.name,
-          archive.insert_date,
-          archive.sha256 ? archive.sha256 : archive.sha1,
+          archive.part.id,
           archive.part.file_verification_code,
+          archive.part.type,
+          archive.part.name,
+          archive.part.version,
+          archive.part.family_name,
           archive.part.license,
           archive.part.license_rationale,
           archive.part.license_notice,
+          archive.part.comprised,
+          archive.part.aliases,
         ].toString()
-      } else
-        return [
-          archive.name,
-          archive.insert_date,
-          archive.sha256 ? archive.sha256 : archive.sha1,
-        ]
+      } else return
     })
     .join("\n")
 
@@ -225,7 +246,6 @@ function downloadCSV() {
 async function handleUpload(files: File[]) {
   processing.value = true
   fileCount.value += files.length
-  let retry = false
   for (const file of files) {
     processedFiles.value++
     await uploadMutation
@@ -238,25 +258,24 @@ async function handleUpload(files: File[]) {
             "[GraphQL] the requested element is null which the schema does not allow"
           ) {
             incompleteUploads.value.push(file.name)
-            retry = true
           }
         }
         return value
       })
       .then((value) => {
         if (value.data.uploadArchive.archive) {
-          uploadedArchives.value.push(value.data.uploadArchive.archive)
+          const uploadedArchive = value.data.uploadArchive.archive
+          uploadedArchive.name = file.name
+          uploadedArchives.value.push(uploadedArchive)
         }
       })
-  }
-  if (retry) {
-    processIncomplete()
-  } else {
     processing.value = false
-    if (pid.value != undefined) {
+    if (pid.value != undefined && uploadedArchives.value.length > 0) {
       addToPartList(uploadedArchives.value)
     }
-    showDialog.value = true
+    if( uploadedArchives.value.length > 0){
+      showDialog.value = true
+    }
   }
 }
 
@@ -303,6 +322,5 @@ onBeforeMount(function () {
   }
 
   pid.value = parseInt(id)
-  console.log(pid.value)
 })
 </script>
