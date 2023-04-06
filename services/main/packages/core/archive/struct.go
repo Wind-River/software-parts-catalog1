@@ -200,6 +200,7 @@ func (p *ArchiveController) Process(arch *Archive) error {
 	return <-ret
 }
 
+// TODOC
 func (p *ArchiveController) visitArchive(archivePath string, archive *tree.Archive) error { // Visit Archive
 	log.Debug().Str("archivePath", archivePath).Msg("Uploading Archive")
 
@@ -235,6 +236,7 @@ func (p *ArchiveController) visitArchive(archivePath string, archive *tree.Archi
 	return nil
 }
 
+// TODOC
 func (p *ArchiveController) visitFile(filePath string, f *tree.File) error { // Visit file
 	log.Debug().Str("filePath", filePath).Msg("Uploading File")
 	// Only store if file is a normal file greater than 0 bytes

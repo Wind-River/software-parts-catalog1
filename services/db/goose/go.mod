@@ -1,6 +1,6 @@
 module wrs/tkdb/goose
 
-go 1.18
+go 1.20
 
 require (
 	github.com/google/uuid v1.3.0
@@ -8,8 +8,10 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/pressly/goose/v3 v3.5.3
-	github.com/rs/zerolog v1.15.0
+	github.com/rs/zerolog v1.26.1
+	gitlab.devstar.cloud/ip-systems/extract.git v0.2.0
 	gitlab.devstar.cloud/ip-systems/verification-code.git v0.2.1
+	golang.org/x/text v0.3.7
 )
 
 require (
@@ -21,5 +23,4 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/jackc/pgtype v1.10.0 // indirect
 	golang.org/x/crypto v0.0.0-20220210151621-f4118a5b28e2 // indirect
-	golang.org/x/text v0.3.7 // indirect
 )

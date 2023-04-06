@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS part (
     file_verification_code BYTEA UNIQUE,
     size BIGINT,
     license TEXT,
-    license_rationale JSON,
+    license_rationale TEXT,
     license_notice TEXT,
     automation_license TEXT,
-    automation_license_rationale JSON,
+    automation_license_rationale TEXT,
     comprised UUID REFERENCES part(part_id)
 );
 

@@ -10,13 +10,16 @@ import (
 	"regexp"
 	"time"
 
+	"wrs/tkdb/goose/packages/archive/processor"
+	"wrs/tkdb/goose/packages/archive/sync"
+	"wrs/tkdb/goose/packages/archive/tree"
 	"wrs/tkdb/goose/packages/file_collection"
+	"wrs/tkdb/goose/packages/part"
 
 	"strings"
 
 	generic "wrs/tkdb/goose/packages/generics/graph"
 
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
 	"github.com/rs/zerolog"
@@ -32,126 +35,22 @@ func init() {
 func upComplexCopy(tx *sql.Tx) error {
 	// This code is executed when the migration is applied.
 
-	// Fix old data so that it can be copied cleanly
-	if err := updateFileCollectionVerificationCodes(tx); err != nil {
+	// oldFileCollections, err := collectSpecificCollectionsToTest(tx)
+	oldFileCollections, err := collectCollectionsWithLicenseData(tx)
+	if err != nil {
 		return err
 	}
 
-	// Copy file_collection and related tables to part and related tables
-
-	// verification codes need to be set after everything is in place,
-	// so this map is used to keep track of what UUIDs resulted from which file_collections.
-	fileCollectionIDToPartUUIDMap := make(map[int64]uuid.UUID)
-
-	oldCollections := make([]OldFilecollection, 0)
-	// first pass create parts and assign files
-	rows, err := tx.Query("SELECT id, insert_date, flag_extract, flag_license_extracted, license_id, license_rationale, license_expression, license_notice, copyright, verification_code_one, verification_code_two " +
-		"FROM file_collection WHERE verification_code_two IS NOT NULL")
+	archiveProcessor, err := processor.NewArchiveProcessor(tx, nil, nil)
 	if err != nil {
-		return errors.Wrapf(err, "error selecting file_collections")
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var tmp OldFilecollection
-		var flagExtract, flagLicenseExtracted int
-		if err := rows.Scan(&tmp.FileCollectionID, &tmp.InsertDate, &flagExtract,
-			&flagLicenseExtracted, &tmp.LicenseID, &tmp.LicenseRationale, &tmp.LicenseExpression, &tmp.LicenseNotice,
-			&tmp.Copyright, &tmp.FileVerificationCodeOne, &tmp.FileVerificationCodeTwo); err != nil {
-			return errors.Wrapf(err, "error scanning file_collections")
-		}
-
-		tmp.Extracted = flagExtract > 0
-		tmp.LicenseExtracted = flagLicenseExtracted > 0
-
-		oldCollections = append(oldCollections, tmp)
-	}
-	rows.Close()
-
-	for _, old := range oldCollections {
-		newID := uuid.New()
-		if _, err := tx.Exec("INSERT INTO part (part_id, family_name, license, license_rationale) "+
-			"VALUES ($1, $2, $3, $4)",
-			newID, "TODO", old.LicenseExpression, old.LicenseRationale); err != nil {
-			return errors.Wrapf(err, "error creating part %s from file_collection %d", newID, old.FileCollectionID)
-		}
-
-		fileCollectionIDToPartUUIDMap[old.FileCollectionID] = newID
-
-		if _, err := tx.Exec("WITH old AS (SELECT checksum_sha256 FROM file "+
-			"INNER JOIN file_belongs_collection on file_belongs_collection.file_id=file.id WHERE file_belongs_collection.file_collection_id=$1) "+
-			"INSERT INTO part_has_file (part_id, file_sha256) SELECT $2, checksum_sha256 FROM old",
-			old.FileCollectionID, newID); err != nil {
-			return errors.Wrapf(err, "error transfering files from file_collection %d to part %s", old.FileCollectionID, newID)
-		}
+		return err
 	}
 
-	// second pass copy relationship between parts
-	for _, old := range oldCollections {
-		partID := fileCollectionIDToPartUUIDMap[old.FileCollectionID]
-
-		childrenIDs := make([]int64, 0)
-		rows, err := tx.Query("SELECT child_id FROM file_collection_contains WHERE parent_id=$1",
-			old.FileCollectionID)
-		if err != nil {
-			return errors.Wrapf(err, "error selecting children of %d", old.FileCollectionID)
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			var tmp int64
-			if err := rows.Scan(&tmp); err != nil {
-				return errors.Wrapf(err, "error scanning children of %d", old.FileCollectionID)
-			}
-		}
-		rows.Close()
-
-		for _, childFCID := range childrenIDs {
-			childID := fileCollectionIDToPartUUIDMap[childFCID]
-			if _, err := tx.Exec("INSERT INTO part_has_part (parent_id, child_id) VALUES ($1, $2)",
-				partID, childID); err != nil {
-				return errors.Wrapf(err, "error inserting part_has_part (%d:%s, %d:%s)",
-					old.FileCollectionID, partID,
-					childFCID, childID)
-			}
-		}
-	}
-
-	// third pass set verification codes
-	// this will trigger the verifcation code verification and will break here if any part has the wrong verification code v2
-	for _, old := range oldCollections {
-		partID := fileCollectionIDToPartUUIDMap[old.FileCollectionID]
-
-		if _, err := tx.Exec("UPDATE part SET file_verification_code=$1 WHERE part_id=$2",
-			old.FileVerificationCodeTwo, partID); err != nil {
-			return errors.Wrapf(err, "error setting file_verification_code of %s to %x", partID, old.FileVerificationCodeTwo)
-		}
-	}
-
-	// use archive_table and id map to point archives to parts
-	rows, err = tx.Query("SELECT checksum_sha256, file_collection_id FROM archive_table WHERE file_collection_id IS NOT NULL")
-	if err != nil {
-		return errors.Wrapf(err, "error selecting old archives")
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var checksumSha256 string
-		var fileCollectionID int64
-		if err := rows.Scan(&checksumSha256, &fileCollectionID); err != nil {
-			return errors.Wrapf(err, "error scanning old archives")
-		}
-
-		partID := fileCollectionIDToPartUUIDMap[fileCollectionID]
-		sha256, err := hex.DecodeString(checksumSha256)
-		if err != nil {
-			return errors.Wrapf(err, "error decoding sha256 %s", checksumSha256)
-		}
-
-		if _, err := tx.Exec("UPDATE archive_table SET part_id=$1 WHERE sha256=$2",
-			partID, sha256); err != nil {
-			return errors.Wrapf(err, "error setting part_id of archive %s to %s",
-				checksumSha256, partID)
+	for _, v := range oldFileCollections {
+		if err := processCollectionsArchives(archiveProcessor, v); err == processor.ErrSha256 {
+			log.Warn().Int64("old file_collection_id", v.FileCollectionID).Msg("Skipping File Collection missing sha256 files")
+		} else if err != nil {
+			return err
 		}
 	}
 
@@ -160,6 +59,148 @@ func upComplexCopy(tx *sql.Tx) error {
 
 func downComplexCopy(tx *sql.Tx) error {
 	// This code is executed when the migration is rolled back.
+	return nil
+}
+
+func collectSpecificCollectionsToTest(tx *sql.Tx) ([]OldFilecollection, error) {
+	oldCollections := make([]OldFilecollection, 0)
+
+	rows, err := tx.Query(`SELECT fc.id, fc.insert_date, fc.flag_extract, fc.flag_license_extracted, fc.license_rationale, fc.verification_code_one, fc.verification_code_two,
+		le.expression
+		FROM file_collection fc
+		INNER JOIN license_expression le ON le.id=fc.license_id
+		WHERE fc.license_id IS NOT NULL
+		AND fc.id IN (269056)`)
+	// AND (SELECT COUNT(*) FROM archive_table WHERE file_collection_id=fc.id) > 0`)
+	// AND fc.id NOT IN (6081, 6008)`) // TODO properly filter out collections with no archives
+	if err != nil {
+		return nil, errors.Wrapf(err, "error selecting file_collections")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tmp OldFilecollection
+		var licenseRationale sql.NullString
+		var flagExtract, flagLicenseExtracted int
+		if err := rows.Scan(&tmp.FileCollectionID, &tmp.InsertDate, &flagExtract,
+			&flagLicenseExtracted, &licenseRationale,
+			&tmp.FileVerificationCodeOne, &tmp.FileVerificationCodeTwo,
+			&tmp.LicenseExpression); err != nil {
+			return nil, errors.Wrapf(err, "error scanning file_collections")
+		}
+
+		if licenseRationale.Valid {
+			tmp.LicenseRationale = licenseRationale.String
+		}
+		tmp.Extracted = flagExtract > 0
+		tmp.LicenseExtracted = flagLicenseExtracted > 0
+
+		oldCollections = append(oldCollections, tmp)
+	}
+	rows.Close()
+
+	return oldCollections, nil
+}
+
+func collectCollectionsWithLicenseData(tx *sql.Tx) ([]OldFilecollection, error) {
+	oldCollections := make([]OldFilecollection, 0)
+
+	rows, err := tx.Query(`SELECT fc.id, fc.insert_date, fc.flag_extract, fc.flag_license_extracted, fc.license_rationale, fc.verification_code_one, fc.verification_code_two,
+		le.expression
+		FROM file_collection fc
+		INNER JOIN license_expression le ON le.id=fc.license_id
+		WHERE fc.license_id IS NOT NULL`)
+	// AND (SELECT COUNT(*) FROM archive_table WHERE file_collection_id=fc.id) > 0`)
+	// AND fc.id NOT IN (6081, 6008)`) // TODO properly filter out collections with no archives
+	if err != nil {
+		return nil, errors.Wrapf(err, "error selecting file_collections")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tmp OldFilecollection
+		var licenseRationale sql.NullString
+		var flagExtract, flagLicenseExtracted int
+		if err := rows.Scan(&tmp.FileCollectionID, &tmp.InsertDate, &flagExtract,
+			&flagLicenseExtracted, &licenseRationale,
+			&tmp.FileVerificationCodeOne, &tmp.FileVerificationCodeTwo,
+			&tmp.LicenseExpression); err != nil {
+			return nil, errors.Wrapf(err, "error scanning file_collections")
+		}
+
+		if licenseRationale.Valid {
+			tmp.LicenseRationale = licenseRationale.String
+		}
+		tmp.Extracted = flagExtract > 0
+		tmp.LicenseExtracted = flagLicenseExtracted > 0
+
+		oldCollections = append(oldCollections, tmp)
+	}
+	rows.Close()
+
+	return oldCollections, nil
+}
+
+func processCollectionsArchives(archiveProcessor *processor.ArchiveProcessor, ofc OldFilecollection) error {
+	// find archives
+	archiveIDs := make([]int64, 0)
+	rows, err := archiveProcessor.Tx.Query(`SELECT id FROM archive_table 
+	WHERE file_collection_id=$1 AND checksum_sha1 IS NOT NULL AND extract_status<>-404`,
+		ofc.FileCollectionID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var tmp int64
+		if err := rows.Scan(&tmp); err != nil {
+			return errors.Wrapf(err, "error scanning archive of collection %d", ofc.FileCollectionID)
+		}
+
+		archiveIDs = append(archiveIDs, tmp)
+	}
+	var root tree.Node
+	if len(archiveIDs) == 0 {
+		// log.Warn().Int64("file_collection_id", ofc.FileCollectionID).Msg("Skipping Collection With No Archives")
+		root, err = archiveProcessor.ProcessCollection(ofc.FileCollectionID)
+		if err != nil {
+			return err
+		}
+	} else {
+		// process one
+		root, err = archiveProcessor.ProcessArchive(archiveIDs[0], nil)
+		if err != nil {
+			return errors.Wrapf(err, "error processing archive %d", archiveIDs[0])
+		}
+	}
+
+	// calculate verification code
+	if err := tree.CalculateVerificationCodes(root); err != nil {
+		return err
+	}
+	// TODO backport sync
+	rootUUID, err := sync.SyncTree(archiveProcessor.Tx, &part.PartController{DB: archiveProcessor.Tx}, root)
+	// upsert other archives
+	for _, v := range archiveIDs {
+		a, err := processor.InitArchive(archiveProcessor.Tx, v)
+		if err != nil {
+			return err
+		}
+
+		// upsert archive and archive_alias
+		if _, err := archiveProcessor.Tx.Exec(`INSERT INTO archive (sha256, archive_size, md5, sha1, part_id) VALUES ($1, $2, $3, $4, $5)
+				ON CONFLICT (sha256) DO UPDATE SET part_id=EXCLUDED.part_id`,
+			a.Sha256[:], a.Size, a.Md5[:], a.Sha1[:], rootUUID); err != nil {
+			return errors.Wrapf(err, "error upserting archive")
+		}
+
+		if _, err := archiveProcessor.Tx.Exec(`INSERT INTO archive_alias (archive_sha256, name) VALUES ($1, $2) ON CONFLICT (archive_sha256, name) DO NOTHING`,
+			a.Sha256[:], a.GetName()); err != nil {
+			return errors.Wrapf(err, "error upserting archive_alias")
+		}
+	}
+	// TODOING
 	return nil
 }
 
