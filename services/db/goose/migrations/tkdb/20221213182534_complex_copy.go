@@ -52,6 +52,8 @@ func upComplexCopy(tx *sql.Tx) error {
 		} else if err != nil {
 			return err
 		}
+
+		archiveProcessor.Reset()
 	}
 
 	return nil
@@ -142,6 +144,10 @@ func collectCollectionsWithLicenseData(tx *sql.Tx) ([]OldFilecollection, error) 
 }
 
 func processCollectionsArchives(archiveProcessor *processor.ArchiveProcessor, ofc OldFilecollection) error {
+	logger := log.With().Str(zerolog.CallerFieldName, "processCollectionsArchives").Int64("file_collection_id", ofc.FileCollectionID).Logger()
+	logger.Debug().Msg("start")
+	defer logger.Debug().Msg("end")
+
 	// find archives
 	archiveIDs := make([]int64, 0)
 	rows, err := archiveProcessor.Tx.Query(`SELECT id FROM archive_table 
@@ -160,27 +166,40 @@ func processCollectionsArchives(archiveProcessor *processor.ArchiveProcessor, of
 
 		archiveIDs = append(archiveIDs, tmp)
 	}
+	logger.Debug().Interface("archiveIDs", archiveIDs).Msg("collected archives")
+
 	var root tree.Node
 	if len(archiveIDs) == 0 {
 		// log.Warn().Int64("file_collection_id", ofc.FileCollectionID).Msg("Skipping Collection With No Archives")
+		logger.Debug().Msg("processing file_collcetion")
 		root, err = archiveProcessor.ProcessCollection(ofc.FileCollectionID)
 		if err != nil {
 			return err
 		}
 	} else {
+		logger.Debug().Msg("processing archive")
 		// process one
 		root, err = archiveProcessor.ProcessArchive(archiveIDs[0], nil)
 		if err != nil {
 			return errors.Wrapf(err, "error processing archive %d", archiveIDs[0])
 		}
 	}
+	logger.Debug().Msg("processed root node")
 
 	// calculate verification code
 	if err := tree.CalculateVerificationCodes(root); err != nil {
 		return err
 	}
-	// TODO backport sync
+	logger.Debug().Hex("file_verification_code", root.FileVerificationCode).Msg("calculated verification codes")
+
 	rootUUID, err := sync.SyncTree(archiveProcessor.Tx, &part.PartController{DB: archiveProcessor.Tx}, root)
+	if err != nil {
+		return err
+	}
+	logger = logger.With().Str("uuid", rootUUID).Logger()
+	logger.Debug().Msg("synced tree")
+
+	logger.Debug().Interface("archiveIDs", archiveIDs).Msg("upserting other archives")
 	// upsert other archives
 	for _, v := range archiveIDs {
 		a, err := processor.InitArchive(archiveProcessor.Tx, v)
@@ -200,7 +219,8 @@ func processCollectionsArchives(archiveProcessor *processor.ArchiveProcessor, of
 			return errors.Wrapf(err, "error upserting archive_alias")
 		}
 	}
-	// TODOING
+	logger.Debug().Msg("upserted other archives")
+
 	return nil
 }
 
