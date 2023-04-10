@@ -190,13 +190,13 @@ func processCollectionsArchives(archiveProcessor *processor.ArchiveProcessor, of
 	if err := tree.CalculateVerificationCodes(root); err != nil {
 		return err
 	}
-	logger.Debug().Hex("file_verification_code", root.FileVerificationCode).Msg("calculated verification codes")
+	logger.Debug().Hex("file_verification_code", root.GetFileVerificationCode()).Msg("calculated verification codes")
 
 	rootUUID, err := sync.SyncTree(archiveProcessor.Tx, &part.PartController{DB: archiveProcessor.Tx}, root)
 	if err != nil {
 		return err
 	}
-	logger = logger.With().Str("uuid", rootUUID).Logger()
+	logger = logger.With().Str("uuid", rootUUID.String()).Logger()
 	logger.Debug().Msg("synced tree")
 
 	logger.Debug().Interface("archiveIDs", archiveIDs).Msg("upserting other archives")
