@@ -99,6 +99,22 @@ func (r *mutationResolver) DeletePartList(ctx context.Context, id int64) (*model
 	return nil, nil
 }
 
+func (r *mutationResolver) DeletePartFromList(ctx context.Context, list_id int64, part_id string) (*model.PartList, error) {
+	partUUID, err := uuid.Parse(part_id)
+	if err != nil {
+		return nil, errWrapper.Wrapf(err, "error parsing part_id \"%s\"", partUUID)
+	}
+	if list_id != 0 {
+		pl, err := r.PartListController.DeletePartFromList(list_id, partUUID)
+		if err != nil {
+			return nil, err
+		}
+		ret := model.ToPartList(pl)
+		return &ret, nil
+	}
+	return nil, nil
+}
+
 // UploadArchive is the resolver for the uploadArchive field.
 func (r *mutationResolver) UploadArchive(ctx context.Context, file graphql.Upload, name *string) (*model.UploadedArchive, error) {
 	ret := new(model.UploadedArchive)

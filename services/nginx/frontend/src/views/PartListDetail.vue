@@ -3,7 +3,20 @@
   <v-container>
     <v-card class="pa-4">
       <div class="d-flex justify-end align-center mt-2">
-        <v-card-title v-if="parts" class="text-primary me-auto">{{ parts.partlist.name }}</v-card-title>
+        <v-card-title v-if="parts" class="text-primary me-auto">{{
+          parts.partlist.name
+        }}</v-card-title>
+
+        <v-btn class="mx-2" color="primary" size="small" @click="addParts"
+          >Add Parts</v-btn
+        >
+        <v-btn
+          v-if="parts && parts.partlist_parts.length > 0"
+          color="primary"
+          size="small"
+          @click="downloadCSV"
+          >Download CSV</v-btn
+        >
         <v-btn
           class="mx-2"
           color="primary"
@@ -11,28 +24,34 @@
           @click="showDeleteConfirmation"
           >Delete</v-btn
         >
-        <v-btn class="mx-2" color="primary" size="small" @click="addParts"
-          >Add Parts</v-btn
-        >
       </div>
       <v-table>
         <thead>
           <tr>
             <th>Part Name</th>
+            <th>License</th>
             <th>Verification Code</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="parts && parts.partlist_parts.length > 0" v-for="(item, index) in parts.partlist_parts" :key="index">
-            <td>{{ item.name }}</td>
-            <td>{{ item.file_verification_code.substring(14,24) }}</td>
+          <tr
+            v-if="parts && parts.partlist_parts.length > 0"
+            v-for="(item, index) in parts.partlist_parts"
+            :key="index"
+          >
+            <td style="cursor: pointer" @click="redirect(item.id)">
+              {{ item.name }}
+            </td>
+            <td>{{ item.license }}</td>
+            <td>{{ item.file_verification_code.substring(14, 24) }}</td>
             <td>
-              <v-btn class="me-2" @click="redirect(item.id)">Open</v-btn
-              ><v-btn size="small" icon="mdi-delete"></v-btn>
+              <v-btn class="me-2" size="small" color="primary" icon="mdi-delete" @click="deletePartFromList(item.id)"></v-btn>
+              <v-btn color="primary" @click="redirect(item.id)"
+                >Open</v-btn
+              >
             </td>
           </tr>
         </tbody>
-        <v-btn v-if="parts && parts.partlist_parts.length > 0" color="primary" size="small" @click="downloadCSV">Download CSV</v-btn>
       </v-table>
     </v-card>
     <v-dialog v-model="deleteDialogVisible">
@@ -64,7 +83,8 @@
 <script setup lang="ts">
 import { usePartListStore } from "@/stores/partlist"
 import { useMutation, useQuery } from "@urql/vue"
-import download from "downloadjs";
+import download from "downloadjs"
+import Papa from "papaparse"
 import { onBeforeMount, onMounted, ref, Ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
@@ -90,14 +110,13 @@ const partQuery = useQuery({
       license_rationale
       license_notice
       comprised
-      aliases
     }
     partlist(id: $id){
       name
     }
   }
   `,
-  variables: {id: partListID},
+  variables: { id: partListID },
 })
 
 const parts = partQuery.data
@@ -135,11 +154,34 @@ async function deletePartList() {
     })
 }
 
+const deletePartFromListMutation = useMutation(`
+  mutation($list_id: Int64!, $part_id: UUID!){
+    deletePartFromList(list_id: $list_id, part_id: $part_id){
+      id
+      name
+    }
+  }
+`)
+
+async function deletePartFromList(part_id: string){
+  await deletePartFromListMutation
+    .executeMutation({ list_id: partListID.value, part_id: part_id})
+    .then((value) => {
+      if (value.error) {
+        console.log(value.error)
+      }
+      if (value.data) {
+        partQuery.executeQuery()
+      }
+    })
+}
+
+
 //This will redirect router to upload page with part list as params
 function addParts() {
   router.push({
     name: "PartListAdd",
-    params: {id: partListID.value}
+    params: { id: partListID.value },
   })
 }
 
@@ -156,25 +198,23 @@ function convertToCSV(arr: any[]) {
     "license_rationale",
     "license_notice",
     "comprised",
-    "aliases",
     "\n",
   ]
 
   const parsedArr = arr
     .map((part) => {
-        return [
-          part.id,
-          part.file_verification_code,
-          part.type,
-          part.name,
-          part.version,
-          part.family_name,
-          part.license,
-          part.license_rationale,
-          part.license_notice,
-          part.comprised,
-          part.aliases,
-        ].toString()
+      return [
+        part.id,
+        part.file_verification_code,
+        part.type,
+        part.name,
+        part.version,
+        part.family_name,
+        part.license,
+        part.license_rationale,
+        part.license_notice,
+        part.comprised,
+      ].toString()
     })
     .join("\n")
 
@@ -182,7 +222,12 @@ function convertToCSV(arr: any[]) {
 }
 
 function downloadCSV() {
-  download(convertToCSV(parts.value.partlist_parts), "tk-prefilled", "text/csv")
+  download(
+    // convertToCSV(parts.value.partlist_parts),
+    Papa.unparse(parts.value.partlist_parts),
+    parts.value.partlist.name + "-" + new Date().toLocaleDateString(),
+    "text/csv",
+  )
 }
 
 //Collects id from route params

@@ -43,10 +43,10 @@
 import { useMutation } from "@urql/vue"
 import { Ref, ref } from "vue"
 import Upload from "@/components/Upload.vue"
+import Papa from "papaparse"
 
 //Defines the structure of an update csv file
 type UpdateCSV = {
-  aliases: string[]
   comprised: string
   family_name: string
   file_verification_code: string
@@ -54,7 +54,7 @@ type UpdateCSV = {
   license_notice: string
   license_rationale: string
   name: string
-  part_id: string
+  id: string
   type: string
   version: string
 }
@@ -70,7 +70,6 @@ type PartInput = {
   license_rationale?: string
   license_notice?: string
   comprised?: string
-  aliases?: string
 }
 
 //Handles csv files and related processing elements
@@ -94,21 +93,32 @@ const graphqlError = updateMutation.error
 
 //Parses csv file into structure used for update mutations
 function parseCSV(file: File): Promise<UpdateCSV[]> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      if (typeof event.target?.result === "string") {
-        const resultString: string = event.target!.result
-        uploadedCSV.value.push(...csvToArray(resultString))
-        resolve(uploadedCSV.value)
-      } else {
-        reject("error reading uploaded file")
-      }
-    }
-    reader.onerror = (event) => {
-      reject(event.target?.error)
-    }
-    reader.readAsText(file)
+  return new Promise<UpdateCSV[]>((resolve, reject) => {
+    Papa.parse<UpdateCSV>(file, {
+      complete: (results) => {
+        resolve(results.data)
+      },
+      error: (error) => {
+        reject(error)
+      },
+      skipEmptyLines: true,
+      header: true,
+    })
+    //   const reader = new FileReader()
+    //   reader.onload = (event) => {
+    //     if (typeof event.target?.result === "string") {
+    //       const resultString: string = event.target!.result
+    //       uploadedCSV.value.push(...csvToArray(resultString))
+    //       resolve(uploadedCSV.value)
+    //     } else {
+    //       reject("error reading uploaded file")
+    //     }
+    //   }
+    //   reader.onerror = (event) => {
+    //     reject(event.target?.error)
+    //   }
+    //   reader.readAsText(file)
+    // })
   })
 }
 
@@ -116,7 +126,7 @@ function csvToArray(csvString: string): UpdateCSV[] {
   const rows = csvString.slice(csvString.indexOf("\n") + 1).split("\n")
   const arr = rows.reduce((arr: UpdateCSV[], row: string) => {
     const fields = row.split(",")
-    const part_id = fields[0]
+    const id = fields[0]
     const file_verification_code = fields[1]
     const type = fields[2]
     const name = fields[3]
@@ -126,9 +136,8 @@ function csvToArray(csvString: string): UpdateCSV[] {
     const license_rationale = fields[7]
     const license_notice = fields[8]
     const comprised = fields[9]
-    const aliases = fields.slice(10)
     arr.push({
-      part_id,
+      id,
       file_verification_code,
       type,
       name,
@@ -138,11 +147,10 @@ function csvToArray(csvString: string): UpdateCSV[] {
       license_rationale,
       license_notice,
       comprised,
-      aliases,
     })
     return arr
   }, [])
-  return arr.filter((value) => value.part_id !== "")
+  return arr.filter((value) => value.id !== "")
 }
 
 //Function parses csv into processable format and then executes mutations
@@ -150,16 +158,19 @@ async function handleUpload(files: File[]) {
   processing.value = true
   uploadedCSV.value = []
   for (const file of files) {
-    await parseCSV(file).catch((error) => {
+    await parseCSV(file).then((value) => {
+      uploadedCSV.value = [...uploadedCSV.value, ...value]
+    }).catch((error) => {
       console.log(error)
     })
   }
+  console.log(uploadedCSV.value)
   for (const csv of uploadedCSV.value) {
     if (csv.file_verification_code === undefined || "") {
       dialogMessage.value = "Verification code required to update parts."
     } else {
       let updatePartInput: PartInput = {
-        id: csv.part_id,
+        id: csv.id,
         file_verification_code: csv.file_verification_code,
       }
       if (csv.type) {

@@ -103,6 +103,24 @@ func (controller PartListController) DeletePartList(id int64) (*PartList, error)
 	return &ret, nil
 }
 
+func (controller PartListController) DeletePartFromList(list_id int64, part_id uuid.UUID) (*PartList, error) {
+	var ret PartList
+	if err := controller.DB.QueryRowx("SELECT * FROM partlist WHERE id=$1", list_id).StructScan(&ret); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	result, err := controller.DB.Exec("DELETE FROM partlist_has_part WHERE partlist_id=$1 AND part_id=$2", list_id, part_id)
+	if err != nil {
+		return nil, err
+	}
+	if count, _ := result.RowsAffected(); count < 1 {
+		return nil, errors.New("unable to delete partlist, no rows affected")
+	}
+	return &ret, nil
+}
+
 func (controller PartListController) GetByID(partlistID int64) (*PartList, error) {
 	var ret PartList
 	if err := controller.DB.QueryRowx("SELECT * FROM partlist WHERE id=$1",
