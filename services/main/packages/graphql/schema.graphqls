@@ -45,6 +45,7 @@ input PartInput {
 type Mutation {
   addPartList(name: String!, parent_id: Int64): PartList!
   deletePartList(id: Int64!): PartList!
+  deletePartFromList(list_id: Int64!, part_id: UUID!): PartList!
   # Upload an archive to be processed into a part
   uploadArchive(file: Upload!, name: String): UploadedArchive!
   # Updates the part associated with the given archive

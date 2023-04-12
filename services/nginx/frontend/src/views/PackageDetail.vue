@@ -1,15 +1,5 @@
 <!-- This page displays details about a given part -->
 <template>
-  <v-alert
-    v-model="copyAlertVisible"
-    class="elevation-5"
-    type="success"
-    icon="mdi-content-copy"
-    width="100vw"
-    position="fixed"
-  >
-    {{ copyAlertMessage }}
-  </v-alert>
   <v-container>
     <component
       :is="Modal"
@@ -31,26 +21,6 @@
     <h3 v-if="partError">{{ partError }}</h3>
     <h2 v-if="partData" class="mb-6">
       {{ partData.part.name }}
-      <v-icon
-        v-if="partData.part.aliases.length > 0 && aliasesVisible === false"
-        color="primary"
-        style="cursor: pointer"
-        @click="aliasesVisible = true"
-        >mdi-menu-right</v-icon
-      >
-      <v-icon
-        v-if="aliasesVisible === true"
-        color="primary"
-        style="cursor: pointer"
-        @click="aliasesVisible = false"
-        >mdi-menu-left</v-icon
-      >
-      <v-card v-if="aliasesVisible === true">
-      <v-card-title>Aliases</v-card-title>
-      <v-card-text>
-        <v-list :items="partData.part.aliases"> </v-list>
-      </v-card-text>
-    </v-card>
     </h2>
     <v-card v-if="partData">
       <v-row>
@@ -86,11 +56,10 @@
               </tr>
               <tr>
                 <td class="font-weight-bold">Verification Code</td>
-                <td
-                  @click="copyText(partData.part.file_verification_code)"
-                  style="cursor: pointer"
-                >
-                  {{ partData.part.file_verification_code.slice(-10) }}
+                <td>
+                  <CopyText :copytext="partData.part.file_verification_code">
+                    {{ partData.part.file_verification_code.slice(-10) }}
+                  </CopyText>
                 </td>
               </tr>
             </tbody>
@@ -130,7 +99,7 @@
       </v-row>
     </v-card>
 
-    <v-tabs v-model="selectedTab" class="my-4" align-tabs="center">
+    <v-tabs v-model="selectedTab" class="my-4">
       <v-tab
         v-if="
           partData &&
@@ -138,21 +107,31 @@
           partData.part.comprised !== '00000000-0000-0000-0000-000000000000'
         "
         value="comprisedTab"
-        selected-class="text-primary"
+        class="text-primary"
+        selected-class="text-decoration-underline"
       >
         Comprised Of</v-tab
       >
       <v-tab
+        v-if="partData && partData.part.aliases.length > 0"
+        value="aliasesTab"
+        class="text-primary"
+        selected-class="text-decoration-underline"
+        >Aliases</v-tab
+      >
+      <v-tab
         v-if="partData && partData.part.sub_parts.length > 0"
         value="subPartsTab"
-        selected-class="text-primary"
+        class="text-primary"
+        selected-class="text-decoration-underline"
         >Contains</v-tab
       >
       <v-tab
         v-if="partData && partData.archives.length > 0"
         value="availableArchivesTab"
-        selected-class="text-primary"
-        >Available Archives</v-tab
+        class="text-primary"
+        selected-class="text-decoration-underline"
+        >Archives</v-tab
       >
     </v-tabs>
 
@@ -175,6 +154,19 @@
               Open
             </v-btn>
           </td>
+        </tr>
+      </tbody>
+    </v-table>
+
+    <v-table v-if="selectedTab === 'aliasesTab'">
+      <thead>
+        <tr>
+          <th class="bg-primary">Alias</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(alias, index) in partData.part.aliases" :key="index">
+          <td>{{ alias }}</td>
         </tr>
       </tbody>
     </v-table>
@@ -216,11 +208,13 @@
           <td>{{ archive.name }}</td>
           <td>{{ new Date(archive.insert_date).toLocaleDateString() }}</td>
           <td>
+            <CopyText :copytext="archive.sha256? archive.sha256 : archive.sha1">
             {{
               archive.sha256
                 ? "SHA256:" + archive.sha256.substring(0, 10) + "..."
                 : "SHA1:" + archive.sha1.substring(0, 10) + "..."
             }}
+            </CopyText>
           </td>
           <td v-if="archive.sha256 != null">
             <v-btn
@@ -263,9 +257,9 @@
 </template>
 
 <script setup lang="ts">
-import { Ref, ref, computed, onBeforeMount, getCurrentInstance } from "vue"
+import { Ref, ref, computed, onBeforeMount } from "vue"
 import Modal from "@/components/Modal.vue"
-
+import CopyText from "@/components/CopyText.vue"
 import download from "downloadjs"
 import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router"
 import { useQuery } from "@urql/vue"
@@ -326,25 +320,17 @@ const partData = fileCollectionQuery.data
 const partError = fileCollectionQuery.error
 const partFetching = fileCollectionQuery.fetching
 
-//This section handles display of available archives, comprised parts, and contained parts
+//This section handles display of available archives, aliases, and contained parts
 const selectedTab: Ref<string> = ref("")
 
-//This section handles display of aliases
-const aliasesVisible: Ref<boolean> = ref(false)
-
 // This section handles the copying of file_verification codes on click event
-const copyAlertVisible: Ref<boolean> = ref(false)
-const copyAlertMessage: Ref<string> = ref("")
+const copyIcon: Ref<string> = ref("mdi-content-copy")
 const copyText = (value: string) => {
+  copyIcon.value = "mdi-check"
   navigator.clipboard.writeText(value)
-  showCopyAlert("File Verification Code Copied to Clipboard")
-}
-const showCopyAlert = (message: string) => {
-  copyAlertMessage.value = message
-  copyAlertVisible.value = true
   setTimeout(() => {
-    copyAlertVisible.value = false
-  }, 2000)
+    copyIcon.value = "mdi-content-copy"
+  }, 1500)
 }
 
 const error: Ref<string> = ref("Uninitialized Error")

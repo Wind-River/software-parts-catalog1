@@ -142,7 +142,7 @@ github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 gitlab.devstar.cloud/ip-systems/communication-bus.git v0.3.4 h1:MQhlbD2+gMTkPcs8PMSfXuec20HmRgnUu8LMASEW5uE=
 gitlab.devstar.cloud/ip-systems/communication-bus.git v0.3.4/go.mod h1:7gN8zcjMMbbSfxQM54PtmYwCmihgMYOYQNA16WADcyI=
-gitlab.devstar.cloud/ip-systems/extract.git v0.2.0 h1:iHuiM2ZGkQZV8IWH2ZQJMMksSCu8QbKhtJEVSkOhbKA=
+gitlab.devstar.cloud/ip-systems/extract.git v0.2.0 h1:ZxOkvTxWFlSJKT+dylY869/hkW7YVbTyvXArfhZ84Bo=
 gitlab.devstar.cloud/ip-systems/extract.git v0.2.0/go.mod h1:z2t1L55/aPqDmoKqberNgkWUCZ45i2HMdPbKqZMTD+E=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=

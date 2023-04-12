@@ -37,7 +37,7 @@
           </tr>
           <tr v-for="(name, index) in incompleteUploads" :key="index">
             <td>{{ name }}</td>
-            <td></td>
+            <td>Processing</td>
             <td>
               <v-icon color="primary">
                 mdi-update
@@ -209,7 +209,6 @@ function convertToCSV(arr: Archive[]) {
     "license_rationale",
     "license_notice",
     "comprised",
-    "aliases",
     "\n",
   ]
 
@@ -227,7 +226,6 @@ function convertToCSV(arr: Archive[]) {
           archive.part.license_rationale,
           archive.part.license_notice,
           archive.part.comprised,
-          archive.part.aliases,
         ].toString()
       } else return
     })
