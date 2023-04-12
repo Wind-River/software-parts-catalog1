@@ -118,6 +118,7 @@ const uploadMutation = useMutation(`
           automation_license
           automation_license_rationale
           comprised
+          aliases
         }
       }
     }
@@ -151,6 +152,7 @@ const archiveQuery = useQuery({
         automation_license
         automation_license_rationale
         comprised
+        aliases
       }
     }
   }`,

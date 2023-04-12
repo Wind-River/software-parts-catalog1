@@ -52,6 +52,7 @@
             </td>
           </tr>
         </tbody>
+        <v-btn v-if="parts && parts.partlist_parts.length > 0" color="primary" size="small" @click="downloadCSV">Download CSV</v-btn>
       </v-table>
     </v-card>
     <v-dialog v-model="deleteDialogVisible">
