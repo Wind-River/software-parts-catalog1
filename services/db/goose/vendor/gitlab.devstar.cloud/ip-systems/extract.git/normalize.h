@@ -1,1 +1,0 @@
-char* normalize(const char* s);
