@@ -13,6 +13,7 @@
 package graph
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -35,6 +36,11 @@ type DirectedNode[E any, I orderable] struct {
 	Edges DirectedNodeList[E, I]
 }
 
+type DirectedNodeEdge[E any, I orderable] struct {
+	Count int
+	Edge  *DirectedNode[E, I]
+}
+
 func dfsNodeCycleSearch[E any, I orderable](visited map[I]bool, root *DirectedNode[E, I], current *DirectedNode[E, I]) bool {
 	if root == current {
 		return true
@@ -45,12 +51,12 @@ func dfsNodeCycleSearch[E any, I orderable](visited map[I]bool, root *DirectedNo
 	}
 
 	for _, edge := range current.Edges {
-		if visited[edge.ID] {
+		if visited[edge.Edge.ID] {
 			continue // skip node already visited
 		}
 
-		visited[edge.ID] = true
-		if dfsNodeCycleSearch(visited, root, edge) {
+		visited[edge.Edge.ID] = true
+		if dfsNodeCycleSearch(visited, root, edge.Edge) {
 			return true
 		}
 	}
@@ -62,23 +68,23 @@ func (node *DirectedNode[E, I]) IsInCycle() bool {
 	return dfsNodeCycleSearch(make(map[I]bool), node, nil)
 }
 
-type DirectedNodeList[E any, I orderable] []*DirectedNode[E, I] // implement sort.Interface
+type DirectedNodeList[E any, I orderable] []*DirectedNodeEdge[E, I] // implement sort.Interface
 
 func (list DirectedNodeList[E, I]) Len() int {
 	return len(list)
 }
 
 func (list DirectedNodeList[E, I]) Less(i, j int) bool {
-	return list[i].ID < list[j].ID
+	return list[i].Edge.ID < list[j].Edge.ID
 }
 
 func (list DirectedNodeList[E, I]) Swap(i, j int) {
 	list[i], list[j] = list[j], list[i]
 }
 
-func (list DirectedNodeList[E, I]) Search(id I) *DirectedNode[E, I] {
+func (list DirectedNodeList[E, I]) Search(id I) *DirectedNodeEdge[E, I] {
 	index := sort.Search(list.Len(), func(i int) bool {
-		return list[i].ID == id
+		return list[i].Edge.ID == id
 	})
 
 	if index < list.Len() {
@@ -89,12 +95,16 @@ func (list DirectedNodeList[E, I]) Search(id I) *DirectedNode[E, I] {
 }
 
 func (list *DirectedNodeList[E, I]) Add(new *DirectedNode[E, I]) {
-	if list.Search(new.ID) != nil {
+	if nodeEdge := list.Search(new.ID); nodeEdge != nil {
+		nodeEdge.Count++
 		return // node already in list
 	}
 
-	var slice []*DirectedNode[E, I] = *list
-	slice = append(slice, new)
+	var slice []*DirectedNodeEdge[E, I] = *list
+	slice = append(slice, &DirectedNodeEdge[E, I]{
+		Count: 1,
+		Edge:  new,
+	})
 
 	*list = slice
 	sort.Sort(list)
@@ -119,7 +129,7 @@ func (g *DirectedGraph[E, I]) Insert(element E, id I, edges ...*DirectedNode[E, 
 	newNode := &DirectedNode[E, I]{
 		ID:    id,
 		Value: element,
-		Edges: make([]*DirectedNode[E, I], 0, len(edges)),
+		Edges: make([]*DirectedNodeEdge[E, I], 0, len(edges)),
 	}
 	for _, subNode := range edges {
 		if subNode == nil {
@@ -155,7 +165,7 @@ func (g DirectedGraph[E, I]) TraverseUniqueEdges(visitor func(element E) error, 
 		return errors.New("any root id is requried")
 	}
 
-	seenEdges := make(map[DirectedEdge[I]]bool)
+	seenEdges := make(map[DirectedEdge[I]]int)
 	edgeQueue := generics.NewQueue[DirectedEdge[I]]()
 
 	// visit roots
@@ -167,14 +177,14 @@ func (g DirectedGraph[E, I]) TraverseUniqueEdges(visitor func(element E) error, 
 		}
 
 		for _, edge := range rootNode.Edges {
-			if edge.ID == rootNode.ID { // short-circuit cycle to root
+			if edge.Edge.ID == rootNode.ID { // short-circuit cycle to root
 				continue
 			}
 
 			edgeQueue.Push(DirectedEdge[I]{
 				History: "/",
 				FromID:  rootNode.ID,
-				ToID:    edge.ID,
+				ToID:    edge.Edge.ID,
 			})
 		}
 	}
@@ -192,20 +202,40 @@ func (g DirectedGraph[E, I]) TraverseUniqueEdges(visitor func(element E) error, 
 			return err
 		}
 
+		subRootIDs := make([]I, 0)
 		for _, subNode := range currentNode.Edges {
 			subEdge := DirectedEdge[I]{
 				History: filepath.Join(edge.History, fmt.Sprintf("%v", currentNode.ID)),
 				FromID:  currentNode.ID,
-				ToID:    subNode.ID,
+				ToID:    subNode.Edge.ID,
 			}
 
-			if seenEdges[subEdge] { // skip adding known edge
+			if seenCount, ok := seenEdges[subEdge]; !ok { // never before seen edge
+				seenEdges[subEdge] = 1
+				edgeQueue.Push(subEdge)
+			} else if seenCount < subNode.Count { // increment count and push
+				seenEdges[subEdge]++
+				subRootIDs = append(subRootIDs, subEdge.ToID)
+				// edeQueue.Push(subEge)
+			} else { // skip adding saturated edge
 				continue
 			}
-			seenEdges[subEdge] = true
-			edgeQueue.Push(subEdge)
+		}
+		if len(subRootIDs) > 0 {
+			if err := g.TraverseUniqueEdges(visitor, subRootIDs...); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
+}
+
+func (g DirectedGraph[E, I]) String() string {
+	encoded, err := json.Marshal(g)
+	if err != nil {
+		return err.Error()
+	}
+
+	return string(encoded)
 }

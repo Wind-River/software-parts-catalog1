@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS part (
     file_verification_code BYTEA UNIQUE,
     size BIGINT,
     license TEXT,
-    license_rationale JSON,
+    license_rationale TEXT,
     license_notice TEXT,
     automation_license TEXT,
-    automation_license_rationale JSON,
+    automation_license_rationale TEXT,
     comprised UUID REFERENCES part(part_id)
 );
 
@@ -102,7 +102,7 @@ CREATE OR REPLACE FUNCTION verify_part_modification() RETURNS TRIGGER LANGUAGE p
 $$;
 -- +goose StatementEnd
 
-CREATE TRIGGER verify_part_file_verification_code_trigger BEFORE INSERT OR UPDATE ON part FOR EACH ROW EXECUTE PROCEDURE verify_part_modification();
+-- CREATE TRIGGER verify_part_file_verification_code_trigger BEFORE INSERT OR UPDATE ON part FOR EACH ROW EXECUTE PROCEDURE verify_part_modification();
 
 CREATE TABLE IF NOT EXISTS part_has_part (
     parent_id UUID REFERENCES part(part_id),
