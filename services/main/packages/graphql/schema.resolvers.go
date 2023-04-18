@@ -99,13 +99,14 @@ func (r *mutationResolver) DeletePartList(ctx context.Context, id int64) (*model
 	return nil, nil
 }
 
-func (r *mutationResolver) DeletePartFromList(ctx context.Context, list_id int64, part_id string) (*model.PartList, error) {
-	partUUID, err := uuid.Parse(part_id)
+// DeletePartFromList is the resolver for the deletePartFromList field.
+func (r *mutationResolver) DeletePartFromList(ctx context.Context, listID int64, partID string) (*model.PartList, error) {
+	partUUID, err := uuid.Parse(partID)
 	if err != nil {
 		return nil, errWrapper.Wrapf(err, "error parsing part_id \"%s\"", partUUID)
 	}
-	if list_id != 0 {
-		pl, err := r.PartListController.DeletePartFromList(list_id, partUUID)
+	if listID != 0 {
+		pl, err := r.PartListController.DeletePartFromList(listID, partUUID)
 		if err != nil {
 			return nil, err
 		}
@@ -213,12 +214,7 @@ func (r *mutationResolver) UpdateArchive(ctx context.Context, sha256 string, lic
 		return nil, errWrapper.New("error getting part")
 	}
 
-	var jsonRationale json.RawMessage
-	if licenseRationale != nil {
-		jsonRationale = json.RawMessage(*licenseRationale)
-	}
-
-	if err := r.PartController.UpdateTribalKnowledge(part.PartID, nil, nil, nil, familyString, nil, license, jsonRationale, nil, nil, nil, nil); err != nil {
+	if err := r.PartController.UpdateTribalKnowledge(part.PartID, nil, nil, nil, nil, familyString, nil, license, licenseRationale, nil, nil); err != nil {
 		return nil, errWrapper.Wrapf(err, "error updating file_collection")
 	}
 
@@ -228,62 +224,6 @@ func (r *mutationResolver) UpdateArchive(ctx context.Context, sha256 string, lic
 	}
 
 	ret := model.ToArchive(archive)
-
-	return &ret, nil
-}
-
-// UpdatePart is the resolver for the updatePart field.
-func (r *mutationResolver) UpdatePart(ctx context.Context, partInput *model.PartInput) (*model.Part, error) {
-	partUUID, err := uuid.Parse(partInput.ID)
-	if err != nil {
-		return nil, errWrapper.Wrapf(err, "error parsing part_id \"%s\"", partInput.ID)
-	}
-
-	var rawVerificationCode []byte
-	if partInput.FileVerificationCode != nil {
-		rawVerificationCode, err = hex.DecodeString(*partInput.FileVerificationCode)
-		if err != nil {
-			return nil, errWrapper.Wrapf(err, "error decoding verification code")
-		}
-	}
-
-	p, err := r.PartController.GetByID(part.ID(partUUID))
-	if err != nil {
-		return nil, errWrapper.New("error getting part")
-	}
-
-	var rationale json.RawMessage
-	if partInput.LicenseRationale != nil {
-		rationale = json.RawMessage(*partInput.LicenseRationale)
-	}
-	var automationRationale json.RawMessage
-	if partInput.AutomationLicenseRationale != nil {
-		automationRationale = json.RawMessage(*partInput.AutomationLicenseRationale)
-	}
-
-	var comprised *part.ID
-	if partInput.Comprised != nil {
-		comprisedUUID, err := uuid.Parse(*partInput.Comprised)
-		if err != nil {
-			return nil, errWrapper.Wrapf(err, "error parsing comprised \"%s\"", *partInput.Comprised)
-		}
-		comprisedID := part.ID(comprisedUUID)
-
-		comprised = &comprisedID
-	}
-
-	if err := r.PartController.UpdateTribalKnowledge(p.PartID,
-		partInput.Type, partInput.Name, partInput.Version, partInput.FamilyName,
-		rawVerificationCode, partInput.License, rationale, partInput.LicenseNotice, partInput.AutomationLicense, automationRationale, comprised); err != nil {
-		return nil, errWrapper.Wrapf(err, "error updating part")
-	}
-
-	p, err = r.PartController.GetByID(p.PartID)
-	if err != nil {
-		return nil, errWrapper.Wrapf(err, "error getting updated part")
-	}
-
-	ret := model.ToPart(p)
 
 	return &ret, nil
 }
@@ -307,6 +247,53 @@ func (r *mutationResolver) UpdatePartList(ctx context.Context, id int64, name *s
 		return &ret, nil
 	}
 	return nil, nil
+}
+
+// UpdatePart is the resolver for the updatePart field.
+func (r *mutationResolver) UpdatePart(ctx context.Context, partInput *model.PartInput) (*model.Part, error) {
+	partUUID, err := uuid.Parse(partInput.ID)
+	if err != nil {
+		return nil, errWrapper.Wrapf(err, "error parsing part_id \"%s\"", partInput.ID)
+	}
+
+	var rawVerificationCode []byte
+	if partInput.FileVerificationCode != nil {
+		rawVerificationCode, err = hex.DecodeString(*partInput.FileVerificationCode)
+		if err != nil {
+			return nil, errWrapper.Wrapf(err, "error decoding verification code")
+		}
+	}
+
+	p, err := r.PartController.GetByID(part.ID(partUUID))
+	if err != nil {
+		return nil, errWrapper.New("error getting part")
+	}
+
+	var comprised *part.ID
+	if partInput.Comprised != nil {
+		comprisedUUID, err := uuid.Parse(*partInput.Comprised)
+		if err != nil {
+			return nil, errWrapper.Wrapf(err, "error parsing comprised \"%s\"", *partInput.Comprised)
+		}
+		comprisedID := part.ID(comprisedUUID)
+
+		comprised = &comprisedID
+	}
+
+	if err := r.PartController.UpdateTribalKnowledge(p.PartID,
+		partInput.Type, partInput.Name, partInput.Version, partInput.Label, partInput.FamilyName,
+		rawVerificationCode, partInput.License, partInput.LicenseRationale, partInput.Description, comprised); err != nil {
+		return nil, errWrapper.Wrapf(err, "error updating part")
+	}
+
+	p, err = r.PartController.GetByID(p.PartID)
+	if err != nil {
+		return nil, errWrapper.Wrapf(err, "error getting updated part")
+	}
+
+	ret := model.ToPart(p)
+
+	return &ret, nil
 }
 
 // CreateAlias is the resolver for the createAlias field.
@@ -379,18 +366,6 @@ func (r *partResolver) FileVerificationCode(ctx context.Context, obj *model.Part
 // License is the resolver for the license field.
 func (r *partResolver) License(ctx context.Context, obj *model.Part) (*string, error) {
 	return obj.License, nil
-}
-
-// LicenseRationale is the resolver for the license_rationale field.
-func (r *partResolver) LicenseRationale(ctx context.Context, obj *model.Part) (*string, error) {
-	stringRationale := string(obj.LicenseRationale)
-	return &stringRationale, nil
-}
-
-// AutomationLicenseRationale is the resolver for the automation_license_rationale field.
-func (r *partResolver) AutomationLicenseRationale(ctx context.Context, obj *model.Part) (*string, error) {
-	stringRationale := string(obj.AutomationLicenseRationale)
-	return &stringRationale, nil
 }
 
 // Comprised is the resolver for the comprised field.
@@ -635,44 +610,6 @@ func (r *queryResolver) Part(ctx context.Context, id *string, fileVerificationCo
 	return nil, nil // Should this be an error, no arguments found?
 }
 
-// Partlist is the resolver for the partlist field.
-func (r *queryResolver) Partlist(ctx context.Context, id *int64, name *string) (*model.PartList, error) {
-	if id != nil && *id != 0 {
-		pl, err := r.PartListController.GetByID(*id)
-		if err != nil {
-			return nil, err
-		}
-		ret := model.ToPartList(pl)
-		return &ret, nil
-	}
-	if name != nil && *name != "" {
-		pl, err := r.PartListController.GetByName(*name)
-		if err != nil {
-			return nil, err
-		}
-		ret := model.ToPartList(pl)
-		return &ret, nil
-	}
-	return nil, nil
-}
-
-// Partlist is the resolver for the partlist field.
-func (r *queryResolver) PartlistParts(ctx context.Context, id int64) ([]*model.Part, error) {
-	if id != 0 {
-		parts, err := r.PartListController.GetParts(id)
-		if err != nil {
-			return nil, err
-		}
-		ret := make([]*model.Part, len(parts))
-		for i, v := range parts {
-			part := model.ToPart(v)
-			ret[i] = &part
-		}
-		return ret, nil
-	}
-	return nil, nil
-}
-
 // Archives is the resolver for the archives field.
 func (r *queryResolver) Archives(ctx context.Context, id *string, vcode *string) ([]*model.Archive, error) {
 	var partID part.ID
@@ -716,6 +653,44 @@ func (r *queryResolver) Archives(ctx context.Context, id *string, vcode *string)
 	}
 
 	return ret, nil
+}
+
+// Partlist is the resolver for the partlist field.
+func (r *queryResolver) Partlist(ctx context.Context, id *int64, name *string) (*model.PartList, error) {
+	if id != nil && *id != 0 {
+		pl, err := r.PartListController.GetByID(*id)
+		if err != nil {
+			return nil, err
+		}
+		ret := model.ToPartList(pl)
+		return &ret, nil
+	}
+	if name != nil && *name != "" {
+		pl, err := r.PartListController.GetByName(*name)
+		if err != nil {
+			return nil, err
+		}
+		ret := model.ToPartList(pl)
+		return &ret, nil
+	}
+	return nil, nil
+}
+
+// Partlist is the resolver for the partlist field.
+func (r *queryResolver) PartlistParts(ctx context.Context, id int64) ([]*model.Part, error) {
+	if id != 0 {
+		parts, err := r.PartListController.GetParts(id)
+		if err != nil {
+			return nil, err
+		}
+		ret := make([]*model.Part, len(parts))
+		for i, v := range parts {
+			part := model.ToPart(v)
+			ret[i] = &part
+		}
+		return ret, nil
+	}
+	return nil, nil
 }
 
 // Partlists is the resolver for the partlists field.
@@ -843,3 +818,27 @@ type archiveResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type partResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *partResolver) Label(ctx context.Context, obj *model.Part) (*string, error) {
+	if obj.Label == "" {
+		return nil, nil
+	}
+
+	return &obj.Label, nil
+}
+func (r *partResolver) LicenseRationale(ctx context.Context, obj *model.Part) (*string, error) {
+	return obj.LicenseRationale, nil
+}
+func (r *partResolver) Description(ctx context.Context, obj *model.Part) (*string, error) {
+	if obj.Description == "" {
+		return nil, nil
+	}
+
+	return &obj.Description, nil
+}

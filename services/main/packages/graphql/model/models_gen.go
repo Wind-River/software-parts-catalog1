@@ -21,14 +21,16 @@ type PartInput struct {
 	Type                       *string `json:"type"`
 	Name                       *string `json:"name"`
 	Version                    *string `json:"version"`
+	Label                      *string `json:"label"`
 	FamilyName                 *string `json:"family_name"`
 	FileVerificationCode       *string `json:"file_verification_code"`
 	License                    *string `json:"license"`
 	LicenseRationale           *string `json:"license_rationale"`
+	Description                *string `json:"description"`
+	Comprised                  *string `json:"comprised"`
 	LicenseNotice              *string `json:"license_notice"`
 	AutomationLicense          *string `json:"automation_license"`
 	AutomationLicenseRationale *string `json:"automation_license_rationale"`
-	Comprised                  *string `json:"comprised"`
 }
 
 type Profile struct {

@@ -58,19 +58,18 @@ func (id *ID) Scan(value interface{}) error {
 }
 
 type Part struct {
-	PartID                     ID             `db:"part_id"`
-	Type                       sql.NullString `db:"type"`
-	Name                       sql.NullString `db:"name"`
-	Version                    sql.NullString `db:"version"`
-	FamilyName                 sql.NullString `db:"family_name"`
-	FileVerificationCode       []byte         `db:"file_verification_code"`
-	Size                       sql.NullInt64  `db:"size"`
-	License                    sql.NullString `db:"license"`
-	LicenseRationale           sql.NullString `db:"license_rationale"`
-	LicenseNotice              sql.NullString `db:"license_notice"`
-	AutomationLicense          sql.NullString `db:"automation_license"`
-	AutomationLicenseRationale sql.NullString `db:"automation_license_rationale"`
-	Comprised                  ID             `db:"comprised"`
+	PartID               ID             `db:"part_id"`
+	Type                 sql.NullString `db:"type"`
+	Name                 sql.NullString `db:"name"`
+	Version              sql.NullString `db:"version"`
+	Label                sql.NullString `db:"label"`
+	FamilyName           sql.NullString `db:"family_name"`
+	FileVerificationCode []byte         `db:"file_verification_code"`
+	Size                 sql.NullInt64  `db:"size"`
+	License              sql.NullString `db:"license"`
+	LicenseRationale     sql.NullString `db:"license_rationale"`
+	Description          sql.NullString `db:"description"`
+	Comprised            ID             `db:"comprised"`
 }
 
 type PartController struct {
@@ -248,23 +247,21 @@ func appendFragment[T any](column string,
 
 // UpdateTribalKnowledge takes optional values we are receiving from GraphQL and updates them in the database iff they are not nil and not their zero value
 // TODO, should this function be updated to allow to nil or zero values, or should that be a different function we add?
-func (controller PartController) UpdateTribalKnowledge(partID ID, partType *string, name *string, version *string, familyName *string, fileVerificationCode []byte, license *string, licenseRationale json.RawMessage, license_notice *string, automationLicense *string, automationLicenseRational json.RawMessage, comprised *ID) error {
+func (controller PartController) UpdateTribalKnowledge(partID ID, partType *string, name *string, version *string, label *string, familyName *string, fileVerificationCode []byte, license *string, licenseRationale *string, description *string, comprised *ID) error {
 	valueMap := make(map[string]interface{}) // construct key -> value map to pass to query
 	valueMap["pid"] = partID
 	setFragments := make([]string, 0)
 	setFragments, valueMap = appendFragment[string]("type", partType, nil, setFragments, valueMap)
 	setFragments, valueMap = appendFragment[string]("name", name, nil, setFragments, valueMap)
 	setFragments, valueMap = appendFragment[string]("version", version, nil, setFragments, valueMap)
+	setFragments, valueMap = appendFragment[string]("label", label, nil, setFragments, valueMap)
 	setFragments, valueMap = appendFragment[string]("family_name", familyName, nil, setFragments, valueMap)
 	setFragments, valueMap = appendFragment[[]byte]("file_verification_code", &fileVerificationCode,
 		func(b []byte) bool { return len(b) == 0 },
 		setFragments, valueMap)
 	setFragments, valueMap = appendFragment[string]("license", license, nil, setFragments, valueMap)
-	setFragments, valueMap = appendFragment[json.RawMessage]("license_rationale", &licenseRationale,
-		func(rm json.RawMessage) bool { return rm == nil }, setFragments, valueMap)
-	setFragments, valueMap = appendFragment[string]("automation_license", automationLicense, nil, setFragments, valueMap)
-	setFragments, valueMap = appendFragment[json.RawMessage]("automation_license_rationale", &automationLicenseRational,
-		func(rm json.RawMessage) bool { return rm == nil }, setFragments, valueMap)
+	setFragments, valueMap = appendFragment[string]("license_rationale", licenseRationale, nil, setFragments, valueMap)
+	setFragments, valueMap = appendFragment[string]("description", description, nil, setFragments, valueMap)
 	setFragments, valueMap = appendFragment[ID]("comprised", comprised, func(i ID) bool {
 		return i == ID(uuid.Nil)
 	}, setFragments, valueMap)

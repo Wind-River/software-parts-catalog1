@@ -18,14 +18,13 @@ CREATE TABLE IF NOT EXISTS part (
     type LTREE,
     name TEXT,
     version TEXT,
+    label TEXT,
     family_name LTREE,
     file_verification_code BYTEA UNIQUE,
     size BIGINT,
     license TEXT,
     license_rationale TEXT,
-    license_notice TEXT,
-    automation_license TEXT,
-    automation_license_rationale TEXT,
+    description TEXT,
     comprised UUID REFERENCES part(part_id)
 );
 
