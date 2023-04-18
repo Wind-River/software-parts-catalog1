@@ -32,14 +32,17 @@ input PartInput {
   type: String
   name: String
   version: String
+  label: String
   family_name: String
   file_verification_code: String
   license: String
   license_rationale: String
-  license_notice: String
-  automation_license: String
-  automation_license_rationale: String
+  description: String
   comprised: UUID
+
+  license_notice: String @deprecated
+  automation_license: String @deprecated
+  automation_license_rationale: String @deprecated
 }
 
 type Mutation {
@@ -96,18 +99,22 @@ type Part {
   type: String!
   name: String
   version: String
+  label: String
   family_name: String
   file_verification_code: String
   size: Int64
   license: String
   license_rationale: JSON
-  license_notice: String
-  automation_license: String
-  automation_license_rationale: JSON
+  description: String
   comprised: UUID
   aliases: [String!]
   profiles: [Profile!]
   sub_parts: [SubPart!]
+
+
+  license_notice: String @deprecated
+  automation_license: String @deprecated
+  automation_license_rationale: String @deprecated
 }
 
 type PartList {

@@ -69,11 +69,13 @@ func (p *ArchiveController) processFileCollection(db *sqlx.DB, packageGraph *ana
 		}
 
 		// Insert file
-		if _, err = db.Exec("INSERT INTO file (sha256, file_size, md5, sha1) VALUES ($1, $2, $3, $4) ON CONFLICT (sha256) DO NOTHING",
+		if _, err = db.Exec(`INSERT INTO file (sha256, file_size, md5, sha1, label) 
+		VALUES ($1, $2, $3, $4, $5) ON CONFLICT (sha256) DO NOTHING`,
 			f.Sha256[:],
 			fileStat.Size(),
 			f.Md5[:],
-			f.Sha1[:]); err != nil {
+			f.Sha1[:],
+			fileStat.Name()); err != nil {
 			return errors.Wrapf(err, "error inserting file")
 		}
 
