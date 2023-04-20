@@ -95,7 +95,6 @@ const result = useQuery({
       part_id
       part{
         license
-        automation_license
       }
     }
     distance
