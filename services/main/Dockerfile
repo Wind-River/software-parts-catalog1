@@ -1,4 +1,4 @@
-FROM golang:1.18 as BUILD
+FROM golang:1.20 as BUILD
 # Install libarchive and build binary
 
 ##
@@ -52,7 +52,9 @@ COPY --from=WGET promtail-linux-amd64 /usr/local/bin/promtail
 
 
 RUN apt-get update -y && apt-get install -y supervisor
+RUN apt-get install -y python3-minimal
 RUN apt-get install -y vim
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /opt/tk /opt/tk/uploads /var/log/highlander
 COPY ./docker/conf.d /etc/supervisor/conf.d
