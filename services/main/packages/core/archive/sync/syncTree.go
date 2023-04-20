@@ -1,8 +1,11 @@
 package sync
 
 import (
+	"database/sql"
+	"fmt"
 	"path/filepath"
 	"strings"
+	"wrs/tk/packages/core/archive/filename"
 	"wrs/tk/packages/core/archive/tree"
 	"wrs/tk/packages/core/part"
 
@@ -50,10 +53,32 @@ func trimPath(path string) string {
 }
 
 func syncTree(db *sqlx.DB, partController *part.PartController, root *tree.Archive) (uuid.UUID, error) {
+	var name, version, label sql.NullString
+	if pkgName, pkgVersion, err := filename.GetPkgNameVersion(root.GetName()); err != nil {
+		return uuid.Nil, err
+	} else {
+		if pkgName != "" {
+			name.String = pkgName
+			name.Valid = true
+		} else {
+			name.String = root.GetName()
+			name.Valid = true
+		}
+
+		if pkgVersion != "" {
+			version.String = pkgVersion
+			version.Valid = true
+		}
+
+		if name.Valid && version.Valid {
+			label.String = fmt.Sprintf("%s-%s", name.String, version.String)
+			label.Valid = true
+		}
+	}
 	// Insert part
 	var partID uuid.UUID
-	if err := db.QueryRowx(`INSERT INTO part (type, name) VALUES ('archive', $1) RETURNING part_id`,
-		root.GetName()).Scan(&partID); err != nil {
+	if err := db.QueryRowx(`INSERT INTO part (type, name, version, label) VALUES ('archive', $1, $2, $3) RETURNING part_id`,
+		name, version, label).Scan(&partID); err != nil {
 		return partID, errors.Wrapf(err, "error creating part for archive")
 	}
 
