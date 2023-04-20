@@ -15,7 +15,10 @@
           {{ processedFiles + "/" + fileCount }}
         </div>
       </v-card>
-      <v-table v-if="uploadedArchives.length > 0 || incompleteUploads.length > 0" class="ma-4">
+      <v-table
+        v-if="uploadedArchives.length > 0 || incompleteUploads.length > 0"
+        class="ma-4"
+      >
         <thead>
           <tr>
             <th>{{ processedFiles + "/" + fileCount }}</th>
@@ -39,9 +42,7 @@
             <td>{{ name }}</td>
             <td>Processing</td>
             <td>
-              <v-icon color="primary">
-                mdi-update
-              </v-icon>
+              <v-icon color="primary"> mdi-update </v-icon>
             </td>
           </tr>
         </tbody>
@@ -62,6 +63,7 @@ import { onBeforeMount, Ref, ref } from "vue"
 import download from "downloadjs"
 import Upload from "@/components/Upload.vue"
 import { useRoute } from "vue-router"
+import Papa from "papaparse"
 
 //Defines the data types expected to be returned from the catalog
 type Archive = {
@@ -78,10 +80,11 @@ type Part = {
   type: string
   name: string
   version: string
+  label: string
+  description: string
   family_name: string
   license: string
   license_rationale: string
-  license_notice: string
   comprised: string
   aliases: string[]
 }
@@ -109,16 +112,14 @@ const uploadMutation = useMutation(`
           type
           name
           version
+          label
+          description
           family_name
           file_verification_code
           size
           license
           license_rationale
-          license_notice
-          automation_license
-          automation_license_rationale
           comprised
-          aliases
         }
       }
     }
@@ -143,16 +144,14 @@ const archiveQuery = useQuery({
         type
         name
         version
+        label
+        description
         family_name
         file_verification_code
         size
         license
         license_rationale
-        license_notice
-        automation_license
-        automation_license_rationale
         comprised
-        aliases
       }
     }
   }`,
@@ -170,8 +169,8 @@ async function processIncomplete() {
   }
   processing.value = false
   if (pid.value != undefined) {
-      addToPartList(uploadedArchives.value)
-    }
+    addToPartList(uploadedArchives.value)
+  }
   showDialog.value = true
   incompleteUploads.value = []
 }
@@ -204,10 +203,11 @@ function convertToCSV(arr: Archive[]) {
     "type",
     "name",
     "version",
+    "label",
+    "description",
     "family_name",
     "license",
     "license_rationale",
-    "license_notice",
     "comprised",
     "\n",
   ]
@@ -221,10 +221,11 @@ function convertToCSV(arr: Archive[]) {
           archive.part.type,
           archive.part.name,
           archive.part.version,
+          archive.part.label,
+          archive.part.description,
           archive.part.family_name,
           archive.part.license,
           archive.part.license_rationale,
-          archive.part.license_notice,
           archive.part.comprised,
         ].toString()
       } else return
@@ -236,7 +237,11 @@ function convertToCSV(arr: Archive[]) {
 
 //Converts data into csv format and then allows user to download csv file
 function downloadCSV() {
-  download(convertToCSV(uploadedArchives.value), "tk-prefilled", "text/csv")
+  download(
+    Papa.unparse(uploadedArchives.value.map((value) => value.part)),
+    "catalog-prefilled",
+    "text/csv",
+  )
   showDialog.value = false
 }
 
@@ -267,13 +272,13 @@ async function handleUpload(files: File[]) {
           uploadedArchives.value.push(uploadedArchive)
         }
       })
-    processing.value = false
-    if (pid.value != undefined && uploadedArchives.value.length > 0) {
-      addToPartList(uploadedArchives.value)
-    }
-    if( uploadedArchives.value.length > 0){
-      showDialog.value = true
-    }
+  }
+  processing.value = false
+  if (pid.value != undefined && uploadedArchives.value.length > 0) {
+    addToPartList(uploadedArchives.value)
+  }
+  if (uploadedArchives.value.length > 0) {
+    showDialog.value = true
   }
 }
 
@@ -289,20 +294,17 @@ mutation($id: Int64!, $parts: [UUID]){
 `)
 
 async function addToPartList(archives: Archive[]) {
-  const partIDS: string[] = []
-  for (const archive of archives){
-    if (archive.part_id){
-      partIDS.push(archive.part_id)
-    }
-  }
-  await partListMutation.executeMutation({id: pid.value, parts: partIDS}).then((value) => {
-    if (value.error){
-      console.log(value.error)
-    }
-    if(value.data){
-      console.log(value.data)
-    }
-  })
+  const partIDS: string[] = archives.map((value) => value.part_id)
+  await partListMutation
+    .executeMutation({ id: pid.value, parts: partIDS })
+    .then((value) => {
+      if (value.error) {
+        console.log(value.error)
+      }
+      if (value.data) {
+        console.log(value.data)
+      }
+    })
 }
 
 //Responsible for checking if a partlist has been selected to add parts to
