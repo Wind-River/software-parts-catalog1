@@ -48,10 +48,11 @@ import Papa from "papaparse"
 //Defines the structure of an update csv file
 type UpdateCSV = {
   comprised: string
+  description: string
   family_name: string
   file_verification_code: string
+  label: string
   license: string
-  license_notice: string
   license_rationale: string
   name: string
   id: string
@@ -64,11 +65,12 @@ type PartInput = {
   type?: string
   name?: string
   version?: string
+  label?: string
+  description?: string
   family_name?: string
   file_verification_code: string
   license?: string
   license_rationale?: string
-  license_notice?: string
   comprised?: string
 }
 
@@ -104,53 +106,7 @@ function parseCSV(file: File): Promise<UpdateCSV[]> {
       skipEmptyLines: true,
       header: true,
     })
-    //   const reader = new FileReader()
-    //   reader.onload = (event) => {
-    //     if (typeof event.target?.result === "string") {
-    //       const resultString: string = event.target!.result
-    //       uploadedCSV.value.push(...csvToArray(resultString))
-    //       resolve(uploadedCSV.value)
-    //     } else {
-    //       reject("error reading uploaded file")
-    //     }
-    //   }
-    //   reader.onerror = (event) => {
-    //     reject(event.target?.error)
-    //   }
-    //   reader.readAsText(file)
-    // })
   })
-}
-
-function csvToArray(csvString: string): UpdateCSV[] {
-  const rows = csvString.slice(csvString.indexOf("\n") + 1).split("\n")
-  const arr = rows.reduce((arr: UpdateCSV[], row: string) => {
-    const fields = row.split(",")
-    const id = fields[0]
-    const file_verification_code = fields[1]
-    const type = fields[2]
-    const name = fields[3]
-    const version = fields[4]
-    const family_name = fields[5]
-    const license = fields[6]
-    const license_rationale = fields[7]
-    const license_notice = fields[8]
-    const comprised = fields[9]
-    arr.push({
-      id,
-      file_verification_code,
-      type,
-      name,
-      version,
-      family_name,
-      license,
-      license_rationale,
-      license_notice,
-      comprised,
-    })
-    return arr
-  }, [])
-  return arr.filter((value) => value.id !== "")
 }
 
 //Function parses csv into processable format and then executes mutations
@@ -182,6 +138,12 @@ async function handleUpload(files: File[]) {
       if (csv.version) {
         updatePartInput.version = csv.version
       }
+      if (csv.label) {
+        updatePartInput.label = csv.label
+      }
+      if (csv.description) {
+        updatePartInput.description = csv.description
+      }
       if (csv.family_name) {
         updatePartInput.family_name = csv.family_name
       }
@@ -190,9 +152,6 @@ async function handleUpload(files: File[]) {
       }
       if (csv.license_rationale) {
         updatePartInput.license_rationale = csv.license_rationale
-      }
-      if (csv.license_notice) {
-        updatePartInput.license_notice = csv.license_notice
       }
       if (
         csv.comprised &&

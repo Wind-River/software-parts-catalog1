@@ -20,12 +20,12 @@
     ></v-progress-circular>
     <h3 v-if="partError">{{ partError }}</h3>
     <h2 v-if="partData" class="mb-6">
-      {{ partData.part.name }}
+      {{ partData.part.label }}
     </h2>
     <v-card v-if="partData">
       <v-row>
         <v-col cols="8" class="pe-0">
-          <v-table v-if="partData" height="264" fixed-header>
+          <v-table v-if="partData" fixed-header>
             <thead>
               <tr>
                 <th class="bg-primary">Information</th>
@@ -33,6 +33,10 @@
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <td class="font-weight-bold">Name</td>
+                <td>{{ partData.part.name }}</td>
+              </tr>
               <tr>
                 <td class="font-weight-bold">File Count</td>
                 <td>{{ partData.file_count }}</td>
@@ -44,14 +48,15 @@
                 </td>
               </tr>
               <tr>
+                <td class="font-weight-bold">Rationale</td>
+                <td>
+                  {{ partData.part.license_rationale }}
+                </td>
+              </tr>
+              <tr>
                 <td class="font-weight-bold">Description</td>
                 <td>
-                  {{
-                    partData.part.license_rationale &&
-                    partData.part.license_rationale !== "null"
-                      ? JSON.parse(partData.part.license_rationale).rationale
-                      : ""
-                  }}
+                  {{ partData.part.description }}
                 </td>
               </tr>
               <tr>
@@ -67,7 +72,7 @@
         </v-col>
         <v-divider vertical></v-divider>
         <v-col cols="4" class="ps-0">
-          <v-table fixed-header height="264">
+          <v-table fixed-header>
             <thead>
               <tr>
                 <th class="bg-primary">Profiles</th>
@@ -208,12 +213,14 @@
           <td>{{ archive.name }}</td>
           <td>{{ new Date(archive.insert_date).toLocaleDateString() }}</td>
           <td>
-            <CopyText :copytext="archive.sha256? archive.sha256 : archive.sha1">
-            {{
-              archive.sha256
-                ? "SHA256:" + archive.sha256.substring(0, 10) + "..."
-                : "SHA1:" + archive.sha1.substring(0, 10) + "..."
-            }}
+            <CopyText
+              :copytext="archive.sha256 ? archive.sha256 : archive.sha1"
+            >
+              {{
+                archive.sha256
+                  ? "SHA256:" + archive.sha256.substring(0, 10) + "..."
+                  : "SHA1:" + archive.sha1.substring(0, 10) + "..."
+              }}
             </CopyText>
           </td>
           <td v-if="archive.sha256 != null">
@@ -230,34 +237,10 @@
       </tbody>
     </v-table>
   </v-container>
-  <!-- <v-divider vertical></v-divider>
-        <v-col class="px-0">
-          <v-table fixed-header height="264">
-            <thead>
-              <tr>
-                <th class="bg-primary">Aliases</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-if="partData && partData.part.aliases.length > 0"
-                v-for="(alias, index) in partData.part.aliases"
-                :key="index"
-              >
-                <td>
-                  {{ alias }}
-                </td>
-              </tr>
-              <tr v-else>
-                <td>No Aliases Found</td>
-              </tr>
-            </tbody>
-          </v-table>
-        </v-col> -->
 </template>
 
 <script setup lang="ts">
-import { Ref, ref, computed, onBeforeMount } from "vue"
+import { Ref, ref, onBeforeMount } from "vue"
 import Modal from "@/components/Modal.vue"
 import CopyText from "@/components/CopyText.vue"
 import download from "downloadjs"
@@ -284,14 +267,13 @@ const fileCollectionQuery = useQuery({
     type
     name
     version
+    label
+    description
     family_name
     file_verification_code
     size
     license
     license_rationale
-    license_notice
-    automation_license
-    automation_license_rationale
     aliases
     comprised
     sub_parts{

@@ -78,10 +78,11 @@ type Part = {
   type: string
   name: string
   version: string
+  label: string
+  description: string
   family_name: string
   license: string
   license_rationale: string
-  license_notice: string
   comprised: string
   aliases: string[]
 }
@@ -109,14 +110,13 @@ const uploadMutation = useMutation(`
           type
           name
           version
+          label
+          description
           family_name
           file_verification_code
           size
           license
           license_rationale
-          license_notice
-          automation_license
-          automation_license_rationale
           comprised
           aliases
         }
@@ -143,14 +143,13 @@ const archiveQuery = useQuery({
         type
         name
         version
+        label
+        description
         family_name
         file_verification_code
         size
         license
         license_rationale
-        license_notice
-        automation_license
-        automation_license_rationale
         comprised
         aliases
       }
@@ -204,10 +203,11 @@ function convertToCSV(arr: Archive[]) {
     "type",
     "name",
     "version",
+    "label",
+    "description",
     "family_name",
     "license",
     "license_rationale",
-    "license_notice",
     "comprised",
     "\n",
   ]
@@ -221,10 +221,11 @@ function convertToCSV(arr: Archive[]) {
           archive.part.type,
           archive.part.name,
           archive.part.version,
+          archive.part.label,
+          archive.part.description,
           archive.part.family_name,
           archive.part.license,
           archive.part.license_rationale,
-          archive.part.license_notice,
           archive.part.comprised,
         ].toString()
       } else return
@@ -236,7 +237,7 @@ function convertToCSV(arr: Archive[]) {
 
 //Converts data into csv format and then allows user to download csv file
 function downloadCSV() {
-  download(convertToCSV(uploadedArchives.value), "tk-prefilled", "text/csv")
+  download(convertToCSV(uploadedArchives.value), "catalog-prefilled", "text/csv")
   showDialog.value = false
 }
 

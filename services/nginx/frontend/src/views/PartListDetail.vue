@@ -104,12 +104,13 @@ const partQuery = useQuery({
       type
       name
       version
+      label
+      description
       family_name
       file_verification_code
       size
       license
       license_rationale
-      license_notice
       comprised
     }
     partlist(id: $id){
@@ -186,47 +187,11 @@ function addParts() {
   })
 }
 
-//TODO download part details for all parts in part list
-function convertToCSV(arr: any[]) {
-  const array = [
-    "part_id",
-    "file_verification_code",
-    "type",
-    "name",
-    "version",
-    "family_name",
-    "license",
-    "license_rationale",
-    "license_notice",
-    "comprised",
-    "\n",
-  ]
-
-  const parsedArr = arr
-    .map((part) => {
-      return [
-        part.id,
-        part.file_verification_code,
-        part.type,
-        part.name,
-        part.version,
-        part.family_name,
-        part.license,
-        part.license_rationale,
-        part.license_notice,
-        part.comprised,
-      ].toString()
-    })
-    .join("\n")
-
-  return array.toString() + parsedArr
-}
-
 function downloadCSV() {
   download(
     // convertToCSV(parts.value.partlist_parts),
     Papa.unparse(parts.value.partlist_parts),
-    parts.value.partlist.name + "-" + new Date().toLocaleDateString(),
+    parts.value.partlist.name + "-" + new Date().toUTCString(),
     "text/csv",
   )
 }
