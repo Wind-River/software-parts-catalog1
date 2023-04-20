@@ -52,7 +52,6 @@
             </td>
           </tr>
         </tbody>
-        <v-btn v-if="parts && parts.partlist_parts.length > 0" color="primary" size="small" @click="downloadCSV">Download CSV</v-btn>
       </v-table>
     </v-card>
     <v-dialog v-model="deleteDialogVisible">
@@ -189,9 +188,8 @@ function addParts() {
 
 function downloadCSV() {
   download(
-    // convertToCSV(parts.value.partlist_parts),
     Papa.unparse(parts.value.partlist_parts),
-    parts.value.partlist.name + "-" + new Date().toUTCString(),
+    parts.value.partlist.name + "-" + new Date().toISOString(),
     "text/csv",
   )
 }

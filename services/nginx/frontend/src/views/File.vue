@@ -15,7 +15,10 @@
           {{ processedFiles + "/" + fileCount }}
         </div>
       </v-card>
-      <v-table v-if="uploadedArchives.length > 0 || incompleteUploads.length > 0" class="ma-4">
+      <v-table
+        v-if="uploadedArchives.length > 0 || incompleteUploads.length > 0"
+        class="ma-4"
+      >
         <thead>
           <tr>
             <th>{{ processedFiles + "/" + fileCount }}</th>
@@ -39,9 +42,7 @@
             <td>{{ name }}</td>
             <td>Processing</td>
             <td>
-              <v-icon color="primary">
-                mdi-update
-              </v-icon>
+              <v-icon color="primary"> mdi-update </v-icon>
             </td>
           </tr>
         </tbody>
@@ -62,6 +63,7 @@ import { onBeforeMount, Ref, ref } from "vue"
 import download from "downloadjs"
 import Upload from "@/components/Upload.vue"
 import { useRoute } from "vue-router"
+import Papa from "papaparse"
 
 //Defines the data types expected to be returned from the catalog
 type Archive = {
@@ -118,7 +120,6 @@ const uploadMutation = useMutation(`
           license
           license_rationale
           comprised
-          aliases
         }
       }
     }
@@ -151,7 +152,6 @@ const archiveQuery = useQuery({
         license
         license_rationale
         comprised
-        aliases
       }
     }
   }`,
@@ -169,8 +169,8 @@ async function processIncomplete() {
   }
   processing.value = false
   if (pid.value != undefined) {
-      addToPartList(uploadedArchives.value)
-    }
+    addToPartList(uploadedArchives.value)
+  }
   showDialog.value = true
   incompleteUploads.value = []
 }
@@ -237,7 +237,11 @@ function convertToCSV(arr: Archive[]) {
 
 //Converts data into csv format and then allows user to download csv file
 function downloadCSV() {
-  download(convertToCSV(uploadedArchives.value), "catalog-prefilled", "text/csv")
+  download(
+    Papa.unparse(uploadedArchives.value.map((value) => value.part)),
+    "catalog-prefilled",
+    "text/csv",
+  )
   showDialog.value = false
 }
 
@@ -268,13 +272,13 @@ async function handleUpload(files: File[]) {
           uploadedArchives.value.push(uploadedArchive)
         }
       })
-    processing.value = false
-    if (pid.value != undefined && uploadedArchives.value.length > 0) {
-      addToPartList(uploadedArchives.value)
-    }
-    if( uploadedArchives.value.length > 0){
-      showDialog.value = true
-    }
+  }
+  processing.value = false
+  if (pid.value != undefined && uploadedArchives.value.length > 0) {
+    addToPartList(uploadedArchives.value)
+  }
+  if (uploadedArchives.value.length > 0) {
+    showDialog.value = true
   }
 }
 
@@ -290,20 +294,17 @@ mutation($id: Int64!, $parts: [UUID]){
 `)
 
 async function addToPartList(archives: Archive[]) {
-  const partIDS: string[] = []
-  for (const archive of archives){
-    if (archive.part_id){
-      partIDS.push(archive.part_id)
-    }
-  }
-  await partListMutation.executeMutation({id: pid.value, parts: partIDS}).then((value) => {
-    if (value.error){
-      console.log(value.error)
-    }
-    if(value.data){
-      console.log(value.data)
-    }
-  })
+  const partIDS: string[] = archives.map((value) => value.part_id)
+  await partListMutation
+    .executeMutation({ id: pid.value, parts: partIDS })
+    .then((value) => {
+      if (value.error) {
+        console.log(value.error)
+      }
+      if (value.data) {
+        console.log(value.data)
+      }
+    })
 }
 
 //Responsible for checking if a partlist has been selected to add parts to

@@ -31,12 +31,20 @@ type PartListController struct {
 
 func (controller PartListController) AddParts(id int64, parts []*uuid.UUID) (*PartList, error) {
 	for _, v := range parts {
+		var exists bool
+		err := controller.DB.QueryRowx("SELECT EXISTS(SELECT FROM partlist_has_part WHERE partlist_id=$1 AND part_id=$2)", id, *v).Scan(&exists)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+		if exists {
+			continue
+		}
 		result, err := controller.DB.Exec("INSERT INTO partlist_has_part(partlist_id, part_id) VALUES ($1, $2)", id, *v)
 		if err != nil {
 			return nil, err
 		}
 		if count, _ := result.RowsAffected(); count < 1 {
-			return nil, errors.New("unable to insert partlist, no rows affected")
+			return nil, errors.New("unable to insert part, no rows affected")
 		}
 	}
 	var ret PartList
