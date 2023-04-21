@@ -123,7 +123,7 @@ type ComplexityRoot struct {
 		Archives      func(childComplexity int, id *string, vcode *string) int
 		Comprised     func(childComplexity int, id *string) int
 		FileCount     func(childComplexity int, id *string, vcode *string) int
-		FindArchive   func(childComplexity int, query string, method *string) int
+		FindArchive   func(childComplexity int, query string, method *string, costs *model.SearchCosts) int
 		Part          func(childComplexity int, id *string, fileVerificationCode *string, sha256 *string, sha1 *string, name *string) int
 		Partlist      func(childComplexity int, id *int64, name *string) int
 		PartlistParts func(childComplexity int, id int64) int
@@ -179,7 +179,7 @@ type PartResolver interface {
 type QueryResolver interface {
 	TestArchive(ctx context.Context) (*model.Archive, error)
 	Archive(ctx context.Context, sha256 *string, name *string) (*model.Archive, error)
-	FindArchive(ctx context.Context, query string, method *string) ([]*model.ArchiveDistance, error)
+	FindArchive(ctx context.Context, query string, method *string, costs *model.SearchCosts) ([]*model.ArchiveDistance, error)
 	Part(ctx context.Context, id *string, fileVerificationCode *string, sha256 *string, sha1 *string, name *string) (*model.Part, error)
 	Archives(ctx context.Context, id *string, vcode *string) ([]*model.Archive, error)
 	Partlist(ctx context.Context, id *int64, name *string) (*model.PartList, error)
@@ -647,7 +647,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.FindArchive(childComplexity, args["query"].(string), args["method"].(*string)), true
+		return e.complexity.Query.FindArchive(childComplexity, args["query"].(string), args["method"].(*string), args["costs"].(*model.SearchCosts)), true
 
 	case "Query.part":
 		if e.complexity.Query.Part == nil {
@@ -753,6 +753,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputPartInput,
+		ec.unmarshalInputSearchCosts,
 	)
 	first := true
 
@@ -823,7 +824,7 @@ type Query {
   # archive returns the archive matching the given sha256 exactly, or matching the given name exactly if sha256 was not given or found
   archive(sha256: String, name: String): Archive
   # find_archive searches the database for archives with names like the given query
-  find_archive(query: String!, method: String): [ArchiveDistance!]!
+  find_archive(query: String!, method: String, costs: SearchCosts): [ArchiveDistance!]!
   # part returns the part matching the first matching not nil identifying info 
   part(id: UUID, file_verification_code: String, sha256: String, sha1: String, name: String): Part
   # archives list archives pointing to the part identified by part_id or verification code
@@ -858,6 +859,13 @@ input PartInput {
   license_notice: String @deprecated
   automation_license: String @deprecated
   automation_license_rationale: String @deprecated
+}
+
+input SearchCosts {
+  insert: Int!
+  delete: Int!
+  substitute: Int!
+  max_distance: Int
 }
 
 type Mutation {
@@ -1395,6 +1403,15 @@ func (ec *executionContext) field_Query_find_archive_args(ctx context.Context, r
 		}
 	}
 	args["method"] = arg1
+	var arg2 *model.SearchCosts
+	if tmp, ok := rawArgs["costs"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("costs"))
+		arg2, err = ec.unmarshalOSearchCosts2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐSearchCosts(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["costs"] = arg2
 	return args, nil
 }
 
@@ -3990,7 +4007,7 @@ func (ec *executionContext) _Query_find_archive(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().FindArchive(rctx, fc.Args["query"].(string), fc.Args["method"].(*string))
+		return ec.resolvers.Query().FindArchive(rctx, fc.Args["query"].(string), fc.Args["method"].(*string), fc.Args["costs"].(*model.SearchCosts))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6885,6 +6902,58 @@ func (ec *executionContext) unmarshalInputPartInput(ctx context.Context, obj int
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputSearchCosts(ctx context.Context, obj interface{}) (model.SearchCosts, error) {
+	var it model.SearchCosts
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"insert", "delete", "substitute", "max_distance"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "insert":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("insert"))
+			it.Insert, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "delete":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("delete"))
+			it.Delete, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "substitute":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("substitute"))
+			it.Substitute, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "max_distance":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("max_distance"))
+			it.MaxDistance, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -8348,6 +8417,21 @@ func (ec *executionContext) marshalNDocument2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋ
 	return ec._Document(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
+	res, err := graphql.UnmarshalInt(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) unmarshalNInt642int64(ctx context.Context, v interface{}) (int64, error) {
 	res, err := graphql.UnmarshalInt64(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -8949,6 +9033,22 @@ func (ec *executionContext) marshalODocument2ᚕᚖwrsᚋtkᚋpackagesᚋgraphql
 	return ret
 }
 
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalInt(*v)
+	return res
+}
+
 func (ec *executionContext) unmarshalOInt642int64(ctx context.Context, v interface{}) (int64, error) {
 	res, err := graphql.UnmarshalInt64(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -9058,6 +9158,14 @@ func (ec *executionContext) marshalOProfile2ᚕᚖwrsᚋtkᚋpackagesᚋgraphql�
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalOSearchCosts2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐSearchCosts(ctx context.Context, v interface{}) (*model.SearchCosts, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputSearchCosts(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

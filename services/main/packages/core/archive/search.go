@@ -12,6 +12,7 @@ package archive
 
 import (
 	"fmt"
+	"strings"
 
 	scan "wrs/tk/packages/generics/rows"
 
@@ -32,6 +33,7 @@ const (
 	METHOD_SUBSTRING
 	METHOD_LEVENSHTEIN
 	METHOD_FAST_LEVENSHTEIN
+	METHOD_LEVENSHTEIN_LESS_EQUAL
 )
 
 func SearchMethodString(m SearchMethod) string {
@@ -44,6 +46,8 @@ func SearchMethodString(m SearchMethod) string {
 		return "levenshtein"
 	case METHOD_FAST_LEVENSHTEIN:
 		return "fast"
+	case METHOD_LEVENSHTEIN_LESS_EQUAL:
+		return "levenshtein_less_equal"
 	}
 
 	return fmt.Sprintf("unrecognized{%d}", m)
@@ -57,6 +61,8 @@ func ParseMethod(key string) SearchMethod {
 		return METHOD_LEVENSHTEIN
 	case "fast":
 		return METHOD_FAST_LEVENSHTEIN
+	case "levenshtein_less_equal":
+		return METHOD_LEVENSHTEIN_LESS_EQUAL
 	default:
 		return METHOD_UNKNOWN
 	}
@@ -71,8 +77,8 @@ type ArchiveDistance struct {
 	Distance       int64            `db:"distance"`
 }
 
-func (controller ArchiveController) SearchForArchiveAll(query string, method SearchMethod) ([]ArchiveDistance, error) {
-	rows, err := controller.searchForArchive(query, method)
+func (controller ArchiveController) SearchForArchiveAll(query string, method SearchMethod, insertCost int, deleteCost int, substituteCost int, maxDistance int) ([]ArchiveDistance, error) {
+	rows, err := controller.searchForArchive(query, method, insertCost, deleteCost, substituteCost, maxDistance)
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +87,8 @@ func (controller ArchiveController) SearchForArchiveAll(query string, method Sea
 	return scan.ScanAll[ArchiveDistance](rows)
 }
 
-func (controller ArchiveController) SearchForArchiveTo(query string, method SearchMethod) (chan scan.ScannedRow[ArchiveDistance], error) {
-	rows, err := controller.searchForArchive(query, method)
+func (controller ArchiveController) SearchForArchiveTo(query string, method SearchMethod, insertCost int, deleteCost int, substituteCost int, maxDistance int) (chan scan.ScannedRow[ArchiveDistance], error) {
+	rows, err := controller.searchForArchive(query, method, insertCost, deleteCost, substituteCost, maxDistance)
 	if err != nil {
 		return nil, err
 	}
@@ -90,33 +96,42 @@ func (controller ArchiveController) SearchForArchiveTo(query string, method Sear
 	return scan.ScanTo[ArchiveDistance](rows)
 }
 
-func (controller ArchiveController) searchForArchive(query string, method SearchMethod) (*sqlx.Rows, error) {
+func (controller ArchiveController) searchForArchive(query string, method SearchMethod, insertCost int, deleteCost int, substituteCost int, maxDistance int) (*sqlx.Rows, error) {
+	query = strings.ToLower(query)
 	// We support several different kinds of comparisons.
 	// like is effectively a sub-string search.
 	// fast performs a levenshtein string comparison on the results of a sub-string search.
 	// levenshtein performs a levenshtein string comparison on all archives in the database.
+	selct := `SELECT a.sha256, a.part_id, archive_alias.name, ARRAY(SELECT name FROM archive_alias WHERE archive_alias.archive_sha256=a.sha256) AS names`
+	from := `FROM archive a
+	INNER JOIN archive_alias ON archive_alias.archive_sha256=a.sha256`
 	var sql string
 	var values []interface{}
 	switch method {
 	case METHOD_SUBSTRING:
-		sql = `SELECT a.sha256, a.part_id, archive_alias.name, ARRAY(SELECT name FROM archive_alias WHERE archive_alias.archive_sha256=a.sha256) AS names
-		FROM archive a
-		INNER JOIN archive_alias ON archive_alias.archive_sha256=a.sha256
-		WHERE archive_alias.name LIKE $1::TEXT ORDER BY archive_alias.name`
+		where := `WHERE LOWER(archive_alias.name) LIKE $1::TEXT ORDER BY archive_alias.name`
+		sql = fmt.Sprintf("%s %s %s", selct, from, where)
 		values = []interface{}{fmt.Sprintf("%%%s%%", query)}
 	case METHOD_FAST_LEVENSHTEIN:
-		sql = `SELECT a.sha256, a.part_id, archive_alias.name, ARRAY(SELECT name FROM archive_alias WHERE archive_alias.archive_sha256=a.sha256) AS names,
-		levenshtein(archive_alias.name, $2, 10, 1, 100) AS distance
-		FROM archive a
-		INNER JOIN archive_alias ON archive_alias.archive_sha256=a.sha256
-		WHERE archive_alias.name LIKE $1::TEXT ORDER BY distance`
+		selct = fmt.Sprintf(`%s,
+		levenshtein(LOWER(archive_alias.name), $2, %d, %d, %d) AS distance`,
+			selct, insertCost, deleteCost, substituteCost)
+		where := `WHERE LOWER(archive_alias.name) LIKE $1::TEXT ORDER BY distance`
+		sql = fmt.Sprintf("%s %s %s", selct, from, where)
 		values = []interface{}{fmt.Sprintf("%%%s%%", query), query}
 	case METHOD_LEVENSHTEIN:
-		sql = `SELECT a.sha256, a.part_id, archive_alias.name, ARRAY(SELECT name FROM archive_alias WHERE archive_alias.archive_sha256=a.sha256) AS names,
-		levenshtein(archive_alias.name, $1, 10, 1, 100) AS distance
-		FROM archive a
-		INNER JOIN archive_alias ON archive_alias.archive_sha256=a.sha256
-		ORDER BY distance`
+		selct = fmt.Sprintf(`%s,
+		levenshtein(LOWER(archive_alias.name), $1, %d, %d, %d) AS distance`,
+			selct, insertCost, deleteCost, substituteCost)
+		order := `ORDER BY distance`
+		sql = fmt.Sprintf("%s %s %s", selct, from, order)
+		values = []interface{}{query}
+	case METHOD_LEVENSHTEIN_LESS_EQUAL:
+		selct = fmt.Sprintf(`%s,
+		levenshtein_less_equal(LOWER(archive_alias.name), $1, %d, %d, %d, %d) AS distance`,
+			selct, insertCost, deleteCost, substituteCost, maxDistance)
+		order := `ORDER BY distance`
+		sql = fmt.Sprintf("%s %s %s", selct, from, order)
 		values = []interface{}{query}
 	default:
 		msg := fmt.Sprintf("Method %s not recognized", SearchMethodString(method))
