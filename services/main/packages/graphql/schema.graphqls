@@ -8,7 +8,7 @@ type Query {
   # archive returns the archive matching the given sha256 exactly, or matching the given name exactly if sha256 was not given or found
   archive(sha256: String, name: String): Archive
   # find_archive searches the database for archives with names like the given query
-  find_archive(query: String!, method: String): [ArchiveDistance!]!
+  find_archive(query: String!, method: String, costs: SearchCosts): [ArchiveDistance!]!
   # part returns the part matching the first matching not nil identifying info 
   part(id: UUID, file_verification_code: String, sha256: String, sha1: String, name: String): Part
   # archives list archives pointing to the part identified by part_id or verification code
@@ -43,6 +43,13 @@ input PartInput {
   license_notice: String @deprecated
   automation_license: String @deprecated
   automation_license_rationale: String @deprecated
+}
+
+input SearchCosts {
+  insert: Int!
+  delete: Int!
+  substitute: Int!
+  max_distance: Int
 }
 
 type Mutation {

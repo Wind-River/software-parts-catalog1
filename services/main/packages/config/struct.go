@@ -34,6 +34,13 @@ type MainConfig struct {
 	Frontdoor struct { // Frontdoor host to download source from
 		Host string `toml:"host"`
 	}
+
+	Search struct {
+		InsertCost     int `toml:"insert"`
+		Deletecost     int `toml:"delete"`
+		SubstituteCost int `toml:"substitute"`
+		MaxDistance    int `toml:"maxDistance"`
+	} `toml:"search"`
 }
 
 // Initialize a configuration with defaults set

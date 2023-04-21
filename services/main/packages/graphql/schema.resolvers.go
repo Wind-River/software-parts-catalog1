@@ -12,6 +12,7 @@ import (
 	"os"
 	"wrs/tk/packages/core/archive"
 	"wrs/tk/packages/core/part"
+	"wrs/tk/packages/editDistance"
 	"wrs/tk/packages/generics"
 	"wrs/tk/packages/graphql/generated"
 	"wrs/tk/packages/graphql/model"
@@ -489,7 +490,7 @@ func (r *queryResolver) Archive(ctx context.Context, sha256 *string, name *strin
 }
 
 // FindArchive is the resolver for the find_archive field.
-func (r *queryResolver) FindArchive(ctx context.Context, query string, method *string) ([]*model.ArchiveDistance, error) {
+func (r *queryResolver) FindArchive(ctx context.Context, query string, method *string, costs *model.SearchCosts) ([]*model.ArchiveDistance, error) {
 	var methodValue archive.SearchMethod
 	if method == nil || *method == "" {
 		methodValue = archive.ParseMethod("levenshtein")
@@ -497,15 +498,31 @@ func (r *queryResolver) FindArchive(ctx context.Context, query string, method *s
 		methodValue = archive.ParseMethod(*method)
 	}
 
+	if costs == nil {
+		costs = &model.SearchCosts{
+			Insert:      editDistance.OPERATION_INSERT_COST,
+			Delete:      editDistance.OPERATION_DELETE_COST,
+			Substitute:  editDistance.OPERATION_SUBSTITUTE_COST,
+			MaxDistance: &editDistance.DISTANCE_MAX,
+		}
+	}
+	if costs.MaxDistance == nil {
+		costs.MaxDistance = &editDistance.DISTANCE_MAX_NIL
+	}
+
 	log.Debug().Str("query", query).Interface("methodValue", methodValue).Msg("SearchForArchiveAll")
-	distances, err := r.ArchiveController.SearchForArchiveAll(query, methodValue)
+	distances, err := r.ArchiveController.SearchForArchiveAll(query, methodValue, costs.Insert, costs.Delete, costs.Substitute, *costs.MaxDistance)
 	if err != nil {
 		return nil, err
 	}
 	log.Debug().Interface("distances", distances).Msg("Found Archive Distances")
-	ret := make([]*model.ArchiveDistance, len(distances))
+	ret := make([]*model.ArchiveDistance, 0, len(distances))
 	log.Debug().Str("query", query).Interface("methodValue", methodValue).Msg("SearchForArchiveAll")
-	for i, v := range distances {
+	for _, v := range distances {
+		if costs.MaxDistance != nil && *costs.MaxDistance != editDistance.DISTANCE_MAX_NIL && v.Distance > int64(*costs.MaxDistance) {
+			// if max distance in use reject distances above it
+			continue
+		}
 		internalArchive, err := r.ArchiveController.GetBySha256(v.Sha256[:])
 		if err != nil {
 			return nil, err
@@ -513,10 +530,10 @@ func (r *queryResolver) FindArchive(ctx context.Context, query string, method *s
 		a := model.ToArchive(internalArchive)
 		a.Name = v.MatchedName
 
-		ret[i] = &model.ArchiveDistance{
+		ret = append(ret, &model.ArchiveDistance{
 			Distance: v.Distance,
 			Archive:  &a,
-		}
+		})
 	}
 
 	return ret, nil

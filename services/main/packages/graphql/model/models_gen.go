@@ -38,6 +38,13 @@ type Profile struct {
 	Documents []*Document `json:"documents"`
 }
 
+type SearchCosts struct {
+	Insert      int  `json:"insert"`
+	Delete      int  `json:"delete"`
+	Substitute  int  `json:"substitute"`
+	MaxDistance *int `json:"max_distance"`
+}
+
 type SubPart struct {
 	Path string `json:"path"`
 	Part *Part  `json:"part"`

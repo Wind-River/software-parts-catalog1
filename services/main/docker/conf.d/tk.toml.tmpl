@@ -18,3 +18,9 @@ bucket = "{{with .Env.S3_BUCKET}}{{ . }}{{end}}"
 id = "{{ with .Env.S3_USER}}{{ . }}{{end}}"
 secret = "{{ with .Env.S3_SECRET}}{{ . }}{{end}}"
 token = "{{ with .Env.S3_TOKEN}}{{ . }}{{end}}"
+
+[search]
+insert = {{with .Env.SEARCH_INSERT}}{{ . }}{{else}}20{{end}}
+delete = {{with .Env.SEARCH_DELETE}}{{ . }}{{else}}2{{end}}
+substitute = {{with .Env.SEARCH_SUBSTITUTE}}{{ . }}{{else}}30{{end}}
+maxDistance = {{with .Env.SEARCH_MAX_DISTANCE}}{{ . }}{{else}}75{{end}}
