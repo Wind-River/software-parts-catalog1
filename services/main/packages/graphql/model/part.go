@@ -96,7 +96,7 @@ func TypeToLTree(partType string) (string, error) {
 		switch {
 		case len(subTypes) == 0: // file
 			return "", errors.New("file expects a sub-type")
-		case reflect.DeepEqual(subTypes, []string{"src"}): // file/src
+		case reflect.DeepEqual(subTypes, []string{"source"}): // file/source
 		case reflect.DeepEqual(subTypes, []string{"binary"}): // file/binary
 		case subTypes[0] == "custom" && len(subTypes) > 1: // file/custom/*
 		default:
