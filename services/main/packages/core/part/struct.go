@@ -115,6 +115,9 @@ func (controller PartController) GetByVerificationCode(verificationCode []byte) 
 
 		return nil, err
 	}
+	if ret.Type.Valid {
+		ret.Type.String = "/" + strings.ReplaceAll(ret.Type.String, ".", "/")
+	}
 
 	return &ret, nil
 }
@@ -129,6 +132,9 @@ func (controller PartController) GetByID(partID ID) (*Part, error) {
 
 		log.Error().Err(err).Str("partID", partID.String()).Msg("Error getting part by id")
 		return nil, err
+	}
+	if ret.Type.Valid {
+		ret.Type.String = "/" + strings.ReplaceAll(ret.Type.String, ".", "/")
 	}
 
 	return &ret, nil
@@ -362,4 +368,34 @@ func (controller PartController) AddPartToPart(childID ID, parentID ID, path str
 	}
 
 	return nil
+}
+
+// CreatePart creates a new part with the given info, and returns the newly created part
+// The newly created part should have the same fields as the input, with the additional of a real part UUID
+func (controller PartController) CreatePart(part Part) (*Part, error) {
+	if part.PartID != ID(uuid.Nil) {
+		return nil, errors.New("CreatePart was given a part with an ID")
+	}
+
+	var comprised sql.NullString
+	if part.Comprised != ID(uuid.Nil) {
+		comprised.Valid = true
+		comprised.String = part.Comprised.String()
+	}
+
+	var newPart Part
+	if err := controller.DB.QueryRowx(`INSERT INTO part 
+	(type, name, version, label, family_name, license, license_rationale, description, comprised) 
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+	RETURNING *`,
+		part.Type, part.Name, part.Version, part.Label, part.FamilyName, part.License,
+		part.LicenseRationale, part.Description, comprised).
+		StructScan(&newPart); err != nil {
+		return nil, errors.Wrapf(err, "error inserting part")
+	}
+	if newPart.Type.Valid {
+		newPart.Type.String = "/" + strings.ReplaceAll(newPart.Type.String, ".", "/")
+	}
+
+	return &newPart, nil
 }

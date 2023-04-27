@@ -5,6 +5,7 @@ package graphql
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -169,7 +170,7 @@ func (r *mutationResolver) UploadArchive(ctx context.Context, file graphql.Uploa
 
 	log.Debug().Str(zerolog.CallerFieldName, "mutationResolver.UploadArchive").
 		Interface("arch", arch).Msg("processing archive in background")
-	tmpHandOff = true // TODO shouldn't this be used by the gothread?
+	tmpHandOff = true
 	go func(arch *archive.Archive, archiveController *archive.ArchiveController) error {
 		defer os.Remove(arch.StoragePath.String)
 
@@ -281,8 +282,17 @@ func (r *mutationResolver) UpdatePart(ctx context.Context, partInput *model.Part
 		comprised = &comprisedID
 	}
 
+	var partType *string
+	if partInput.Type != nil && *partInput.Type != "" {
+		lTree, err := model.TypeToLTree(*partInput.Type)
+		if err != nil {
+			return nil, errWrapper.Wrapf(err, "invalid part type")
+		}
+		partType = &lTree
+	}
+
 	if err := r.PartController.UpdateTribalKnowledge(p.PartID,
-		partInput.Type, partInput.Name, partInput.Version, partInput.Label, partInput.FamilyName,
+		partType, partInput.Name, partInput.Version, partInput.Label, partInput.FamilyName,
 		rawVerificationCode, partInput.License, partInput.LicenseRationale, partInput.Description, comprised); err != nil {
 		return nil, errWrapper.Wrapf(err, "error updating part")
 	}
@@ -347,6 +357,59 @@ func (r *mutationResolver) PartHasPart(ctx context.Context, parent string, child
 // PartHasFile is the resolver for the partHasFile field.
 func (r *mutationResolver) PartHasFile(ctx context.Context, id string, fileSha256 string, path *string) (bool, error) {
 	panic(fmt.Errorf("not implemented: PartHasFile - partHasFile"))
+}
+
+// CreatePart is the resolver for the createPart field.
+func (r *mutationResolver) CreatePart(ctx context.Context, partInput model.NewPartInput) (*model.Part, error) {
+	toNullString := func(s *string) sql.NullString {
+		if s == nil {
+			return sql.NullString{}
+		}
+
+		return sql.NullString{
+			Valid:  true,
+			String: *s,
+		}
+	}
+
+	var comprised uuid.UUID
+	if partInput.Comprised != nil && *partInput.Comprised != "" {
+		parsed, err := uuid.Parse(*partInput.Comprised)
+		if err != nil {
+			return nil, errWrapper.Wrapf(err, "error parsing comprised")
+		}
+
+		comprised = parsed
+	}
+
+	var partType sql.NullString
+	if partInput.Type != nil && *partInput.Type != "" {
+		lTree, err := model.TypeToLTree(*partInput.Type)
+		if err != nil {
+			return nil, err
+		}
+		partType.Valid = true
+		partType.String = lTree
+	}
+
+	p, err := r.PartController.CreatePart(part.Part{
+		Type:             partType,
+		Name:             toNullString(partInput.Name),
+		Version:          toNullString(partInput.Version),
+		Label:            toNullString(partInput.Label),
+		FamilyName:       toNullString(partInput.FamilyName),
+		License:          toNullString(partInput.License),
+		LicenseRationale: toNullString(partInput.LicenseRationale),
+		Description:      toNullString(partInput.Description),
+		Comprised:        part.ID(comprised),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ret := model.ToPart(p)
+
+	return &ret, nil
 }
 
 // ID is the resolver for the id field.
@@ -445,11 +508,6 @@ func (r *partResolver) SubParts(ctx context.Context, obj *model.Part) ([]*model.
 	}
 
 	return ret, nil
-}
-
-// TestArchive is the resolver for the test_archive field.
-func (r *queryResolver) TestArchive(ctx context.Context) (*model.Archive, error) {
-	panic(fmt.Errorf("not implemented: TestArchive - test_archive"))
 }
 
 // Archive is the resolver for the archive field.
@@ -835,27 +893,3 @@ type archiveResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type partResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *partResolver) Label(ctx context.Context, obj *model.Part) (*string, error) {
-	if obj.Label == "" {
-		return nil, nil
-	}
-
-	return &obj.Label, nil
-}
-func (r *partResolver) LicenseRationale(ctx context.Context, obj *model.Part) (*string, error) {
-	return obj.LicenseRationale, nil
-}
-func (r *partResolver) Description(ctx context.Context, obj *model.Part) (*string, error) {
-	if obj.Description == "" {
-		return nil, nil
-	}
-
-	return &obj.Description, nil
-}
