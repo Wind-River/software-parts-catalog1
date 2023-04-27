@@ -3,8 +3,6 @@
 # https://gqlgen.com/getting-started/
 
 type Query {
-  # test_archive is not implemented and should probably be removed
-  test_archive: Archive!
   # archive returns the archive matching the given sha256 exactly, or matching the given name exactly if sha256 was not given or found
   archive(sha256: String, name: String): Archive
   # find_archive searches the database for archives with names like the given query
@@ -13,8 +11,12 @@ type Query {
   part(id: UUID, file_verification_code: String, sha256: String, sha1: String, name: String): Part
   # archives list archives pointing to the part identified by part_id or verification code
   archives(id: UUID, vcode: String): [Archive!]!
+  # partlist returns the PartList by id, or if not given, by name
   partlist(id: Int64, name: String): PartList
+  # partlist_parts lists the Parts contained by a partlist
   partlist_parts(id: Int64!): [Part]!
+  # partlists returns the list of other partlists this one contains
+  # if parent_id is 0, returns every root partlist
   partlists(parent_id: Int64!): [PartList]!
   # file_count returns the number of files owned by the given part and its sub-parts
   file_count(id: UUID, vcode: String): Int64!
@@ -27,8 +29,9 @@ type Query {
 
 scalar Upload
 
+# PartInput contains the editable fields of the Part type
 input PartInput {
-  id: UUID!
+  id: UUID! # Required to identify which Part you are trying to edit
   type: String
   name: String
   version: String
@@ -39,28 +42,46 @@ input PartInput {
   license_rationale: String
   description: String
   comprised: UUID
-
-  license_notice: String @deprecated
-  automation_license: String @deprecated
-  automation_license_rationale: String @deprecated
 }
 
+# NewPartInput contains the fields you can set on a new part
+input NewPartInput {
+  type: String
+  name: String
+  version: String
+  label: String
+  family_name: String
+  license: String
+  license_rationale: String
+  description: String
+  comprised: UUID
+}
+
+# SearchCosts contains the variables we can change for the levenshtein or levensthein_less_equal string comparions.
+# These values represent costs for edit operations to try to make one string match another.
+# max_distance will cut off the calculation early if it is clear the cost exceeds the given cost.
+# The defaults are optimized for a user entering a portion of the archive's name that they are searching for.
+# A low delete cost means the cost to delete characters from the full name in the database to match the shorter text the user has entered is lower.
 input SearchCosts {
-  insert: Int!
-  delete: Int!
-  substitute: Int!
-  max_distance: Int
+  insert: Int! # Default 20
+  delete: Int! # Default 2
+  substitute: Int! # Default 30
+  max_distance: Int # Default 75; if set to -1 makes levenshtein_less_equal act like levenshtein
 }
 
 type Mutation {
+  # addPartList creates a new part list with the given parent, or a root part if no parent given
   addPartList(name: String!, parent_id: Int64): PartList!
+  # deletPartList deletes the given empty part list
   deletePartList(id: Int64!): PartList!
+  # deletePartFromList removes the given part from the given list
   deletePartFromList(list_id: Int64!, part_id: UUID!): PartList!
   # Upload an archive to be processed into a part
   uploadArchive(file: Upload!, name: String): UploadedArchive!
   # Updates the part associated with the given archive
   # An error will be returned if the associated part hasn't been created yet
   updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
+  # updatePartLists adds a list of parts to the given part
   updatePartList(id: Int64!, name: String, parts: [UUID]): PartList!
   # Update the given part with non-nil and non-zero fields
   updatePart(partInput: PartInput): Part
@@ -71,8 +92,10 @@ type Mutation {
   attachDocument(id: UUID!, key: String!, title: String, document: JSON!): Boolean!
   # Adds a sub-part to a part at a path
   partHasPart(parent: UUID!, child: UUID!, path: String!): Boolean!
-  # Adds a fil eto a part, potentially at a path
+  # Adds a file to a part, potentially at a path
   partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
+  # Create a new part with the given input
+  createPart(partInput: NewPartInput!): Part!
 }
 
 scalar Int64
@@ -80,10 +103,12 @@ scalar Time
 scalar UUID
 scalar JSON
 
+# Archive contains identifying info and the relationship to its part if it's been successfully extracted
 type Archive {
   sha256: String!
   Size: Int64
   part_id: UUID
+  # part requests the part this archive contained
   part: Part
   md5: String
   sha1: String
@@ -91,16 +116,19 @@ type Archive {
   insert_date: Time!
 }
 
+# ArchiveDistance is a tuple containing an archive, and it's distance from a search term.
 type ArchiveDistance {
   distance: Int64!
   archive: Archive!
 }
 
+# SubPart is a tuple containing a part, and it's path within a parent part
 type SubPart {
   path: String!
   part: Part!
 }
 
+# Part represents a software part
 type Part {
   id: UUID!
   type: String!
@@ -113,15 +141,14 @@ type Part {
   license: String
   license_rationale: JSON
   description: String
+  # comprised is the ID of another part that builds this part
   comprised: UUID
+  # aliases requests the list of aliases for this part
   aliases: [String!]
+  # profiles requests the list of profiles for this part
   profiles: [Profile!]
+  # sub_parts requests the list of other parts this part contains
   sub_parts: [SubPart!]
-
-
-  license_notice: String @deprecated
-  automation_license: String @deprecated
-  automation_license_rationale: String @deprecated
 }
 
 type PartList {
@@ -130,12 +157,10 @@ type PartList {
   parent_id: Int64
 }
 
-type License {
-  name: String!
-}
-
+# TODO replace UploadedArchive with just Archive
+# Extract status is already not being set properly by the server, and can be inferred by the existence of a part
 type UploadedArchive {
-  extracted: Boolean!
+  extracted: Boolean! @deprecated
   archive: Archive
 }
 

@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS part (
     name TEXT,
     version TEXT,
     label TEXT,
-    family_name LTREE,
+    family_name TEXT,
     file_verification_code BYTEA UNIQUE,
     size BIGINT,
     license TEXT,

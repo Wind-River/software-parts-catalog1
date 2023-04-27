@@ -68,14 +68,11 @@ type ComplexityRoot struct {
 		Title    func(childComplexity int) int
 	}
 
-	License struct {
-		Name func(childComplexity int) int
-	}
-
 	Mutation struct {
 		AddPartList        func(childComplexity int, name string, parentID *int64) int
 		AttachDocument     func(childComplexity int, id string, key string, title *string, document string) int
 		CreateAlias        func(childComplexity int, id string, alias string) int
+		CreatePart         func(childComplexity int, partInput model.NewPartInput) int
 		DeletePartFromList func(childComplexity int, listID int64, partID string) int
 		DeletePartList     func(childComplexity int, id int64) int
 		PartHasFile        func(childComplexity int, id string, fileSha256 string, path *string) int
@@ -87,24 +84,21 @@ type ComplexityRoot struct {
 	}
 
 	Part struct {
-		Aliases                    func(childComplexity int) int
-		AutomationLicense          func(childComplexity int) int
-		AutomationLicenseRationale func(childComplexity int) int
-		Comprised                  func(childComplexity int) int
-		Description                func(childComplexity int) int
-		FamilyName                 func(childComplexity int) int
-		FileVerificationCode       func(childComplexity int) int
-		ID                         func(childComplexity int) int
-		Label                      func(childComplexity int) int
-		License                    func(childComplexity int) int
-		LicenseNotice              func(childComplexity int) int
-		LicenseRationale           func(childComplexity int) int
-		Name                       func(childComplexity int) int
-		Profiles                   func(childComplexity int) int
-		Size                       func(childComplexity int) int
-		SubParts                   func(childComplexity int) int
-		Type                       func(childComplexity int) int
-		Version                    func(childComplexity int) int
+		Aliases              func(childComplexity int) int
+		Comprised            func(childComplexity int) int
+		Description          func(childComplexity int) int
+		FamilyName           func(childComplexity int) int
+		FileVerificationCode func(childComplexity int) int
+		ID                   func(childComplexity int) int
+		Label                func(childComplexity int) int
+		License              func(childComplexity int) int
+		LicenseRationale     func(childComplexity int) int
+		Name                 func(childComplexity int) int
+		Profiles             func(childComplexity int) int
+		Size                 func(childComplexity int) int
+		SubParts             func(childComplexity int) int
+		Type                 func(childComplexity int) int
+		Version              func(childComplexity int) int
 	}
 
 	PartList struct {
@@ -129,7 +123,6 @@ type ComplexityRoot struct {
 		PartlistParts func(childComplexity int, id int64) int
 		Partlists     func(childComplexity int, parentID int64) int
 		Profile       func(childComplexity int, id *string, key *string) int
-		TestArchive   func(childComplexity int) int
 	}
 
 	SubPart struct {
@@ -163,6 +156,7 @@ type MutationResolver interface {
 	AttachDocument(ctx context.Context, id string, key string, title *string, document string) (bool, error)
 	PartHasPart(ctx context.Context, parent string, child string, path string) (bool, error)
 	PartHasFile(ctx context.Context, id string, fileSha256 string, path *string) (bool, error)
+	CreatePart(ctx context.Context, partInput model.NewPartInput) (*model.Part, error)
 }
 type PartResolver interface {
 	ID(ctx context.Context, obj *model.Part) (string, error)
@@ -177,7 +171,6 @@ type PartResolver interface {
 	SubParts(ctx context.Context, obj *model.Part) ([]*model.SubPart, error)
 }
 type QueryResolver interface {
-	TestArchive(ctx context.Context) (*model.Archive, error)
 	Archive(ctx context.Context, sha256 *string, name *string) (*model.Archive, error)
 	FindArchive(ctx context.Context, query string, method *string, costs *model.SearchCosts) ([]*model.ArchiveDistance, error)
 	Part(ctx context.Context, id *string, fileVerificationCode *string, sha256 *string, sha1 *string, name *string) (*model.Part, error)
@@ -289,13 +282,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Document.Title(childComplexity), true
 
-	case "License.name":
-		if e.complexity.License.Name == nil {
-			break
-		}
-
-		return e.complexity.License.Name(childComplexity), true
-
 	case "Mutation.addPartList":
 		if e.complexity.Mutation.AddPartList == nil {
 			break
@@ -331,6 +317,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateAlias(childComplexity, args["id"].(string), args["alias"].(string)), true
+
+	case "Mutation.createPart":
+		if e.complexity.Mutation.CreatePart == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createPart_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreatePart(childComplexity, args["partInput"].(model.NewPartInput)), true
 
 	case "Mutation.deletePartFromList":
 		if e.complexity.Mutation.DeletePartFromList == nil {
@@ -435,20 +433,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Part.Aliases(childComplexity), true
 
-	case "Part.automation_license":
-		if e.complexity.Part.AutomationLicense == nil {
-			break
-		}
-
-		return e.complexity.Part.AutomationLicense(childComplexity), true
-
-	case "Part.automation_license_rationale":
-		if e.complexity.Part.AutomationLicenseRationale == nil {
-			break
-		}
-
-		return e.complexity.Part.AutomationLicenseRationale(childComplexity), true
-
 	case "Part.comprised":
 		if e.complexity.Part.Comprised == nil {
 			break
@@ -497,13 +481,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Part.License(childComplexity), true
-
-	case "Part.license_notice":
-		if e.complexity.Part.LicenseNotice == nil {
-			break
-		}
-
-		return e.complexity.Part.LicenseNotice(childComplexity), true
 
 	case "Part.license_rationale":
 		if e.complexity.Part.LicenseRationale == nil {
@@ -709,13 +686,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Profile(childComplexity, args["id"].(*string), args["key"].(*string)), true
 
-	case "Query.test_archive":
-		if e.complexity.Query.TestArchive == nil {
-			break
-		}
-
-		return e.complexity.Query.TestArchive(childComplexity), true
-
 	case "SubPart.part":
 		if e.complexity.SubPart.Part == nil {
 			break
@@ -752,6 +722,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
+		ec.unmarshalInputNewPartInput,
 		ec.unmarshalInputPartInput,
 		ec.unmarshalInputSearchCosts,
 	)
@@ -819,8 +790,6 @@ var sources = []*ast.Source{
 # https://gqlgen.com/getting-started/
 
 type Query {
-  # test_archive is not implemented and should probably be removed
-  test_archive: Archive!
   # archive returns the archive matching the given sha256 exactly, or matching the given name exactly if sha256 was not given or found
   archive(sha256: String, name: String): Archive
   # find_archive searches the database for archives with names like the given query
@@ -829,8 +798,12 @@ type Query {
   part(id: UUID, file_verification_code: String, sha256: String, sha1: String, name: String): Part
   # archives list archives pointing to the part identified by part_id or verification code
   archives(id: UUID, vcode: String): [Archive!]!
+  # partlist returns the PartList by id, or if not given, by name
   partlist(id: Int64, name: String): PartList
+  # partlist_parts lists the Parts contained by a partlist
   partlist_parts(id: Int64!): [Part]!
+  # partlists returns the list of other partlists this one contains
+  # if parent_id is 0, returns every root partlist
   partlists(parent_id: Int64!): [PartList]!
   # file_count returns the number of files owned by the given part and its sub-parts
   file_count(id: UUID, vcode: String): Int64!
@@ -843,8 +816,9 @@ type Query {
 
 scalar Upload
 
+# PartInput contains the editable fields of the Part type
 input PartInput {
-  id: UUID!
+  id: UUID! # Required to identify which Part you are trying to edit
   type: String
   name: String
   version: String
@@ -855,28 +829,46 @@ input PartInput {
   license_rationale: String
   description: String
   comprised: UUID
-
-  license_notice: String @deprecated
-  automation_license: String @deprecated
-  automation_license_rationale: String @deprecated
 }
 
+# NewPartInput contains the fields you can set on a new part
+input NewPartInput {
+  type: String
+  name: String
+  version: String
+  label: String
+  family_name: String
+  license: String
+  license_rationale: String
+  description: String
+  comprised: UUID
+}
+
+# SearchCosts contains the variables we can change for the levenshtein or levensthein_less_equal string comparions.
+# These values represent costs for edit operations to try to make one string match another.
+# max_distance will cut off the calculation early if it is clear the cost exceeds the given cost.
+# The defaults are optimized for a user entering a portion of the archive's name that they are searching for.
+# A low delete cost means the cost to delete characters from the full name in the database to match the shorter text the user has entered is lower.
 input SearchCosts {
-  insert: Int!
-  delete: Int!
-  substitute: Int!
-  max_distance: Int
+  insert: Int! # Default 20
+  delete: Int! # Default 2
+  substitute: Int! # Default 30
+  max_distance: Int # Default 75; if set to -1 makes levenshtein_less_equal act like levenshtein
 }
 
 type Mutation {
+  # addPartList creates a new part list with the given parent, or a root part if no parent given
   addPartList(name: String!, parent_id: Int64): PartList!
+  # deletPartList deletes the given empty part list
   deletePartList(id: Int64!): PartList!
+  # deletePartFromList removes the given part from the given list
   deletePartFromList(list_id: Int64!, part_id: UUID!): PartList!
   # Upload an archive to be processed into a part
   uploadArchive(file: Upload!, name: String): UploadedArchive!
   # Updates the part associated with the given archive
   # An error will be returned if the associated part hasn't been created yet
   updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
+  # updatePartLists adds a list of parts to the given part
   updatePartList(id: Int64!, name: String, parts: [UUID]): PartList!
   # Update the given part with non-nil and non-zero fields
   updatePart(partInput: PartInput): Part
@@ -887,8 +879,10 @@ type Mutation {
   attachDocument(id: UUID!, key: String!, title: String, document: JSON!): Boolean!
   # Adds a sub-part to a part at a path
   partHasPart(parent: UUID!, child: UUID!, path: String!): Boolean!
-  # Adds a fil eto a part, potentially at a path
+  # Adds a file to a part, potentially at a path
   partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
+  # Create a new part with the given input
+  createPart(partInput: NewPartInput!): Part!
 }
 
 scalar Int64
@@ -896,10 +890,12 @@ scalar Time
 scalar UUID
 scalar JSON
 
+# Archive contains identifying info and the relationship to its part if it's been successfully extracted
 type Archive {
   sha256: String!
   Size: Int64
   part_id: UUID
+  # part requests the part this archive contained
   part: Part
   md5: String
   sha1: String
@@ -907,16 +903,19 @@ type Archive {
   insert_date: Time!
 }
 
+# ArchiveDistance is a tuple containing an archive, and it's distance from a search term.
 type ArchiveDistance {
   distance: Int64!
   archive: Archive!
 }
 
+# SubPart is a tuple containing a part, and it's path within a parent part
 type SubPart {
   path: String!
   part: Part!
 }
 
+# Part represents a software part
 type Part {
   id: UUID!
   type: String!
@@ -929,15 +928,14 @@ type Part {
   license: String
   license_rationale: JSON
   description: String
+  # comprised is the ID of another part that builds this part
   comprised: UUID
+  # aliases requests the list of aliases for this part
   aliases: [String!]
+  # profiles requests the list of profiles for this part
   profiles: [Profile!]
+  # sub_parts requests the list of other parts this part contains
   sub_parts: [SubPart!]
-
-
-  license_notice: String @deprecated
-  automation_license: String @deprecated
-  automation_license_rationale: String @deprecated
 }
 
 type PartList {
@@ -946,12 +944,10 @@ type PartList {
   parent_id: Int64
 }
 
-type License {
-  name: String!
-}
-
+# TODO replace UploadedArchive with just Archive
+# Extract status is already not being set properly by the server, and can be inferred by the existence of a part
 type UploadedArchive {
-  extracted: Boolean!
+  extracted: Boolean! @deprecated
   archive: Archive
 }
 
@@ -1058,6 +1054,21 @@ func (ec *executionContext) field_Mutation_createAlias_args(ctx context.Context,
 		}
 	}
 	args["alias"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createPart_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.NewPartInput
+	if tmp, ok := rawArgs["partInput"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("partInput"))
+		arg0, err = ec.unmarshalNNewPartInput2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐNewPartInput(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["partInput"] = arg0
 	return args, nil
 }
 
@@ -1774,12 +1785,6 @@ func (ec *executionContext) fieldContext_Archive_part(ctx context.Context, field
 				return ec.fieldContext_Part_profiles(ctx, field)
 			case "sub_parts":
 				return ec.fieldContext_Part_sub_parts(ctx, field)
-			case "license_notice":
-				return ec.fieldContext_Part_license_notice(ctx, field)
-			case "automation_license":
-				return ec.fieldContext_Part_automation_license(ctx, field)
-			case "automation_license_rationale":
-				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
 		},
@@ -2140,50 +2145,6 @@ func (ec *executionContext) fieldContext_Document_document(ctx context.Context, 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type JSON does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _License_name(ctx context.Context, field graphql.CollectedField, obj *model.License) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_License_name(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_License_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "License",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2638,12 +2599,6 @@ func (ec *executionContext) fieldContext_Mutation_updatePart(ctx context.Context
 				return ec.fieldContext_Part_profiles(ctx, field)
 			case "sub_parts":
 				return ec.fieldContext_Part_sub_parts(ctx, field)
-			case "license_notice":
-				return ec.fieldContext_Part_license_notice(ctx, field)
-			case "automation_license":
-				return ec.fieldContext_Part_automation_license(ctx, field)
-			case "automation_license_rationale":
-				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
 		},
@@ -2876,6 +2831,93 @@ func (ec *executionContext) fieldContext_Mutation_partHasFile(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_partHasFile_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createPart(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createPart(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreatePart(rctx, fc.Args["partInput"].(model.NewPartInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Part)
+	fc.Result = res
+	return ec.marshalNPart2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createPart(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Part_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Part_type(ctx, field)
+			case "name":
+				return ec.fieldContext_Part_name(ctx, field)
+			case "version":
+				return ec.fieldContext_Part_version(ctx, field)
+			case "label":
+				return ec.fieldContext_Part_label(ctx, field)
+			case "family_name":
+				return ec.fieldContext_Part_family_name(ctx, field)
+			case "file_verification_code":
+				return ec.fieldContext_Part_file_verification_code(ctx, field)
+			case "size":
+				return ec.fieldContext_Part_size(ctx, field)
+			case "license":
+				return ec.fieldContext_Part_license(ctx, field)
+			case "license_rationale":
+				return ec.fieldContext_Part_license_rationale(ctx, field)
+			case "description":
+				return ec.fieldContext_Part_description(ctx, field)
+			case "comprised":
+				return ec.fieldContext_Part_comprised(ctx, field)
+			case "aliases":
+				return ec.fieldContext_Part_aliases(ctx, field)
+			case "profiles":
+				return ec.fieldContext_Part_profiles(ctx, field)
+			case "sub_parts":
+				return ec.fieldContext_Part_sub_parts(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createPart_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -3515,129 +3557,6 @@ func (ec *executionContext) fieldContext_Part_sub_parts(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Part_license_notice(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Part_license_notice(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.LicenseNotice, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Part_license_notice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Part",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Part_automation_license(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Part_automation_license(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.AutomationLicense, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Part_automation_license(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Part",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Part_automation_license_rationale(ctx context.Context, field graphql.CollectedField, obj *model.Part) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Part_automation_license_rationale(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.AutomationLicenseRationale, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*string)
-	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Part_automation_license_rationale(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Part",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _PartList_id(ctx context.Context, field graphql.CollectedField, obj *model.PartList) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_PartList_id(ctx, field)
 	if err != nil {
@@ -3861,68 +3780,6 @@ func (ec *executionContext) fieldContext_Profile_documents(ctx context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_test_archive(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_test_archive(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().TestArchive(rctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Archive)
-	fc.Result = res
-	return ec.marshalNArchive2ᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐArchive(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_test_archive(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "sha256":
-				return ec.fieldContext_Archive_sha256(ctx, field)
-			case "Size":
-				return ec.fieldContext_Archive_Size(ctx, field)
-			case "part_id":
-				return ec.fieldContext_Archive_part_id(ctx, field)
-			case "part":
-				return ec.fieldContext_Archive_part(ctx, field)
-			case "md5":
-				return ec.fieldContext_Archive_md5(ctx, field)
-			case "sha1":
-				return ec.fieldContext_Archive_sha1(ctx, field)
-			case "name":
-				return ec.fieldContext_Archive_name(ctx, field)
-			case "insert_date":
-				return ec.fieldContext_Archive_insert_date(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Archive", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_archive(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_archive(ctx, field)
 	if err != nil {
@@ -4120,12 +3977,6 @@ func (ec *executionContext) fieldContext_Query_part(ctx context.Context, field g
 				return ec.fieldContext_Part_profiles(ctx, field)
 			case "sub_parts":
 				return ec.fieldContext_Part_sub_parts(ctx, field)
-			case "license_notice":
-				return ec.fieldContext_Part_license_notice(ctx, field)
-			case "automation_license":
-				return ec.fieldContext_Part_automation_license(ctx, field)
-			case "automation_license_rationale":
-				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
 		},
@@ -4346,12 +4197,6 @@ func (ec *executionContext) fieldContext_Query_partlist_parts(ctx context.Contex
 				return ec.fieldContext_Part_profiles(ctx, field)
 			case "sub_parts":
 				return ec.fieldContext_Part_sub_parts(ctx, field)
-			case "license_notice":
-				return ec.fieldContext_Part_license_notice(ctx, field)
-			case "automation_license":
-				return ec.fieldContext_Part_automation_license(ctx, field)
-			case "automation_license_rationale":
-				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
 		},
@@ -4557,12 +4402,6 @@ func (ec *executionContext) fieldContext_Query_comprised(ctx context.Context, fi
 				return ec.fieldContext_Part_profiles(ctx, field)
 			case "sub_parts":
 				return ec.fieldContext_Part_sub_parts(ctx, field)
-			case "license_notice":
-				return ec.fieldContext_Part_license_notice(ctx, field)
-			case "automation_license":
-				return ec.fieldContext_Part_automation_license(ctx, field)
-			case "automation_license_rationale":
-				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
 		},
@@ -4881,12 +4720,6 @@ func (ec *executionContext) fieldContext_SubPart_part(ctx context.Context, field
 				return ec.fieldContext_Part_profiles(ctx, field)
 			case "sub_parts":
 				return ec.fieldContext_Part_sub_parts(ctx, field)
-			case "license_notice":
-				return ec.fieldContext_Part_license_notice(ctx, field)
-			case "automation_license":
-				return ec.fieldContext_Part_automation_license(ctx, field)
-			case "automation_license_rationale":
-				return ec.fieldContext_Part_automation_license_rationale(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Part", field.Name)
 		},
@@ -6770,6 +6603,98 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputNewPartInput(ctx context.Context, obj interface{}) (model.NewPartInput, error) {
+	var it model.NewPartInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"type", "name", "version", "label", "family_name", "license", "license_rationale", "description", "comprised"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "type":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			it.Type, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "version":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("version"))
+			it.Version, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "label":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("label"))
+			it.Label, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "family_name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("family_name"))
+			it.FamilyName, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "license":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license"))
+			it.License, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "license_rationale":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license_rationale"))
+			it.LicenseRationale, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "description":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("description"))
+			it.Description, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "comprised":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("comprised"))
+			it.Comprised, err = ec.unmarshalOUUID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputPartInput(ctx context.Context, obj interface{}) (model.PartInput, error) {
 	var it model.PartInput
 	asMap := map[string]interface{}{}
@@ -6777,7 +6702,7 @@ func (ec *executionContext) unmarshalInputPartInput(ctx context.Context, obj int
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"id", "type", "name", "version", "label", "family_name", "file_verification_code", "license", "license_rationale", "description", "comprised", "license_notice", "automation_license", "automation_license_rationale"}
+	fieldsInOrder := [...]string{"id", "type", "name", "version", "label", "family_name", "file_verification_code", "license", "license_rationale", "description", "comprised"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -6869,30 +6794,6 @@ func (ec *executionContext) unmarshalInputPartInput(ctx context.Context, obj int
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("comprised"))
 			it.Comprised, err = ec.unmarshalOUUID2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "license_notice":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("license_notice"))
-			it.LicenseNotice, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "automation_license":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("automation_license"))
-			it.AutomationLicense, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "automation_license_rationale":
-			var err error
-
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("automation_license_rationale"))
-			it.AutomationLicenseRationale, err = ec.unmarshalOString2ᚖstring(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -7153,34 +7054,6 @@ func (ec *executionContext) _Document(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
-var licenseImplementors = []string{"License"}
-
-func (ec *executionContext) _License(ctx context.Context, sel ast.SelectionSet, obj *model.License) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, licenseImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("License")
-		case "name":
-
-			out.Values[i] = ec._License_name(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -7288,6 +7161,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_partHasFile(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "createPart":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createPart(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
@@ -7471,18 +7353,6 @@ func (ec *executionContext) _Part(ctx context.Context, sel ast.SelectionSet, obj
 				return innerFunc(ctx)
 
 			})
-		case "license_notice":
-
-			out.Values[i] = ec._Part_license_notice(ctx, field, obj)
-
-		case "automation_license":
-
-			out.Values[i] = ec._Part_automation_license(ctx, field, obj)
-
-		case "automation_license_rationale":
-
-			out.Values[i] = ec._Part_automation_license_rationale(ctx, field, obj)
-
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7587,29 +7457,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "test_archive":
-			field := field
-
-			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_test_archive(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
-			}
-
-			out.Concurrently(i, func() graphql.Marshaler {
-				return rrm(innerCtx)
-			})
 		case "archive":
 			field := field
 
@@ -8236,10 +8083,6 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) marshalNArchive2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐArchive(ctx context.Context, sel ast.SelectionSet, v model.Archive) graphql.Marshaler {
-	return ec._Archive(ctx, sel, &v)
-}
-
 func (ec *executionContext) marshalNArchive2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐArchiveᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Archive) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -8460,6 +8303,15 @@ func (ec *executionContext) marshalNJSON2string(ctx context.Context, sel ast.Sel
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNNewPartInput2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐNewPartInput(ctx context.Context, v interface{}) (model.NewPartInput, error) {
+	res, err := ec.unmarshalInputNewPartInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPart2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx context.Context, sel ast.SelectionSet, v model.Part) graphql.Marshaler {
+	return ec._Part(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNPart2ᚕᚖwrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐPart(ctx context.Context, sel ast.SelectionSet, v []*model.Part) graphql.Marshaler {

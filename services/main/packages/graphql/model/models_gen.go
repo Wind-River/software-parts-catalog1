@@ -12,25 +12,30 @@ type Document struct {
 	Document string  `json:"document"`
 }
 
-type License struct {
-	Name string `json:"name"`
+type NewPartInput struct {
+	Type             *string `json:"type"`
+	Name             *string `json:"name"`
+	Version          *string `json:"version"`
+	Label            *string `json:"label"`
+	FamilyName       *string `json:"family_name"`
+	License          *string `json:"license"`
+	LicenseRationale *string `json:"license_rationale"`
+	Description      *string `json:"description"`
+	Comprised        *string `json:"comprised"`
 }
 
 type PartInput struct {
-	ID                         string  `json:"id"`
-	Type                       *string `json:"type"`
-	Name                       *string `json:"name"`
-	Version                    *string `json:"version"`
-	Label                      *string `json:"label"`
-	FamilyName                 *string `json:"family_name"`
-	FileVerificationCode       *string `json:"file_verification_code"`
-	License                    *string `json:"license"`
-	LicenseRationale           *string `json:"license_rationale"`
-	Description                *string `json:"description"`
-	Comprised                  *string `json:"comprised"`
-	LicenseNotice              *string `json:"license_notice"`
-	AutomationLicense          *string `json:"automation_license"`
-	AutomationLicenseRationale *string `json:"automation_license_rationale"`
+	ID                   string  `json:"id"`
+	Type                 *string `json:"type"`
+	Name                 *string `json:"name"`
+	Version              *string `json:"version"`
+	Label                *string `json:"label"`
+	FamilyName           *string `json:"family_name"`
+	FileVerificationCode *string `json:"file_verification_code"`
+	License              *string `json:"license"`
+	LicenseRationale     *string `json:"license_rationale"`
+	Description          *string `json:"description"`
+	Comprised            *string `json:"comprised"`
 }
 
 type Profile struct {
