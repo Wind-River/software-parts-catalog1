@@ -3,6 +3,7 @@
 SELECT 'up SQL query';
 -- +goose StatementEnd
 ALTER TABLE part ADD COLUMN IF NOT EXISTS label TEXT;
+ALTER TABLE part ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE part DROP COLUMN IF EXISTS license_notice;
 ALTER TABLE part DROP COLUMN IF EXISTS automation_license;
 ALTER TABLE part DROP COLUMN IF EXISTS automation_license_rationale;
