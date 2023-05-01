@@ -35,6 +35,10 @@ The only prerequisites for first run is [docker](https://docs.docker.com/get-doc
 The Software Parts Catalog can then be started in the background with `docker compose up -d`.
 Use `docker compose down` to stop it, or `docker compose down -v` to also stop the virtual volumes containing the database and uploads directories.
 
+## Querying Data
+We use Graphql to provide access to our data.
+More details can be found in the [data access document](/docs/data-access.md), or at out [Graphql schema](/services/main/packages/graphql/schema.graphqls).
+
 ## Persistent Data
 To persist data, you can mount volumes onto your local system.
 To do so edit the volumes section at the bottom of the compose.yml.
