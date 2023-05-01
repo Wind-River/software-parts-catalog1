@@ -9,7 +9,7 @@ type ArchiveDistance struct {
 
 type Document struct {
 	Title    *string `json:"title"`
-	Document string  `json:"document"`
+	Document Json    `json:"document"`
 }
 
 type NewPartInput struct {

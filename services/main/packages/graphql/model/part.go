@@ -10,7 +10,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODOING
 type Part struct {
 	ID                         part.ID  `json:"id"`
 	Type                       string   `json:"type"`

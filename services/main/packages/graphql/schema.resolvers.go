@@ -323,7 +323,7 @@ func (r *mutationResolver) CreateAlias(ctx context.Context, id string, alias str
 }
 
 // AttachDocument is the resolver for the attachDocument field.
-func (r *mutationResolver) AttachDocument(ctx context.Context, id string, key string, title *string, document string) (bool, error) {
+func (r *mutationResolver) AttachDocument(ctx context.Context, id string, key string, title *string, document model.Json) (bool, error) {
 	partUUID, err := uuid.Parse(id)
 	if err != nil {
 		return false, errWrapper.Wrapf(err, "error parsing id")
@@ -466,7 +466,7 @@ func (r *partResolver) Profiles(ctx context.Context, obj *model.Part) ([]*model.
 		documents, err := generics.Map[part.Document, *model.Document](p.Documents, func(d part.Document) (*model.Document, error) {
 			ret := new(model.Document)
 			ret.Title = d.Title
-			ret.Document = string(d.Document)
+			ret.Document = model.Json(d.Document)
 
 			return ret, nil
 		})
@@ -866,7 +866,7 @@ func (r *queryResolver) Profile(ctx context.Context, id *string, key *string) ([
 	ret, err := generics.Map[part.Document, *model.Document](profile.Documents, func(d part.Document) (*model.Document, error) {
 		ret := new(model.Document)
 		ret.Title = d.Title
-		ret.Document = string(d.Document)
+		ret.Document = model.Json(d.Document)
 
 		return ret, nil
 	})

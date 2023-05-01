@@ -70,7 +70,7 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddPartList        func(childComplexity int, name string, parentID *int64) int
-		AttachDocument     func(childComplexity int, id string, key string, title *string, document string) int
+		AttachDocument     func(childComplexity int, id string, key string, title *string, document model.Json) int
 		CreateAlias        func(childComplexity int, id string, alias string) int
 		CreatePart         func(childComplexity int, partInput model.NewPartInput) int
 		DeletePartFromList func(childComplexity int, listID int64, partID string) int
@@ -153,7 +153,7 @@ type MutationResolver interface {
 	UpdatePartList(ctx context.Context, id int64, name *string, parts []*string) (*model.PartList, error)
 	UpdatePart(ctx context.Context, partInput *model.PartInput) (*model.Part, error)
 	CreateAlias(ctx context.Context, id string, alias string) (string, error)
-	AttachDocument(ctx context.Context, id string, key string, title *string, document string) (bool, error)
+	AttachDocument(ctx context.Context, id string, key string, title *string, document model.Json) (bool, error)
 	PartHasPart(ctx context.Context, parent string, child string, path string) (bool, error)
 	PartHasFile(ctx context.Context, id string, fileSha256 string, path *string) (bool, error)
 	CreatePart(ctx context.Context, partInput model.NewPartInput) (*model.Part, error)
@@ -247,7 +247,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Archive.Sha256(childComplexity), true
 
-	case "Archive.Size":
+	case "Archive.size":
 		if e.complexity.Archive.Size == nil {
 			break
 		}
@@ -304,7 +304,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.AttachDocument(childComplexity, args["id"].(string), args["key"].(string), args["title"].(*string), args["document"].(string)), true
+		return e.complexity.Mutation.AttachDocument(childComplexity, args["id"].(string), args["key"].(string), args["title"].(*string), args["document"].(model.Json)), true
 
 	case "Mutation.createAlias":
 		if e.complexity.Mutation.CreateAlias == nil {
@@ -789,6 +789,58 @@ var sources = []*ast.Source{
 #
 # https://gqlgen.com/getting-started/
 
+scalar Upload
+scalar Int64
+scalar Time
+scalar UUID
+scalar JSON
+
+# Archive contains identifying info and the relationship to its part if it's been successfully extracted
+type Archive {
+  sha256: String!
+  size: Int64
+  part_id: UUID
+  # part requests the part this archive contained
+  part: Part
+  md5: String
+  sha1: String
+  name: String
+  insert_date: Time!
+}
+
+# Part represents a software part
+type Part {
+  id: UUID!
+  type: String!
+  name: String
+  version: String
+  label: String
+  family_name: String
+  file_verification_code: String
+  size: Int64
+  license: String
+  license_rationale: String
+  description: String
+  # comprised is the ID of another part that builds this part
+  comprised: UUID
+  # aliases requests the list of aliases for this part
+  aliases: [String!]
+  # profiles requests the list of profiles for this part
+  profiles: [Profile!]
+  # sub_parts requests the list of other parts this part contains
+  sub_parts: [SubPart!]
+}
+
+type Profile {
+  key: String!
+  documents: [Document!]!
+}
+
+type Document {
+  title: String
+  document: JSON!
+}
+
 type Query {
   # archive returns the archive matching the given sha256 exactly, or matching the given name exactly if sha256 was not given or found
   archive(sha256: String, name: String): Archive
@@ -814,7 +866,35 @@ type Query {
   profile(id: UUID, key: String): [Document!]
 }
 
-scalar Upload
+type Mutation {
+  # addPartList creates a new part list with the given parent, or a root part if no parent given
+  addPartList(name: String!, parent_id: Int64): PartList!
+  # deletPartList deletes the given empty part list
+  deletePartList(id: Int64!): PartList!
+  # deletePartFromList removes the given part from the given list
+  deletePartFromList(list_id: Int64!, part_id: UUID!): PartList!
+  # Upload an archive to be processed into a part
+  uploadArchive(file: Upload!, name: String): UploadedArchive!
+  # Updates the part associated with the given archive
+  # An error will be returned if the associated part hasn't been created yet
+  updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
+  # updatePartLists adds a list of parts to the given part
+  updatePartList(id: Int64!, name: String, parts: [UUID]): PartList!
+  # Update the given part with non-nil and non-zero fields
+  updatePart(partInput: PartInput): Part
+  # Create a part alias
+  createAlias(id: UUID!, alias: String!): UUID!
+  # Attach a document to a part
+  # If title is not given, it is a part_has_document, else it is a part_documents entry
+  attachDocument(id: UUID!, key: String!, title: String, document: JSON!): Boolean!
+  # Adds a sub-part to a part at a path
+  partHasPart(parent: UUID!, child: UUID!, path: String!): Boolean!
+  # Adds a file to a part, potentially at a path
+  partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
+  # Create a new part with the given input
+  createPart(partInput: NewPartInput!): Part!
+}
+
 
 # PartInput contains the editable fields of the Part type
 input PartInput {
@@ -856,53 +936,7 @@ input SearchCosts {
   max_distance: Int # Default 75; if set to -1 makes levenshtein_less_equal act like levenshtein
 }
 
-type Mutation {
-  # addPartList creates a new part list with the given parent, or a root part if no parent given
-  addPartList(name: String!, parent_id: Int64): PartList!
-  # deletPartList deletes the given empty part list
-  deletePartList(id: Int64!): PartList!
-  # deletePartFromList removes the given part from the given list
-  deletePartFromList(list_id: Int64!, part_id: UUID!): PartList!
-  # Upload an archive to be processed into a part
-  uploadArchive(file: Upload!, name: String): UploadedArchive!
-  # Updates the part associated with the given archive
-  # An error will be returned if the associated part hasn't been created yet
-  updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
-  # updatePartLists adds a list of parts to the given part
-  updatePartList(id: Int64!, name: String, parts: [UUID]): PartList!
-  # Update the given part with non-nil and non-zero fields
-  updatePart(partInput: PartInput): Part
-  # Create a part alias
-  createAlias(id: UUID!, alias: String!): UUID!
-  # Attach a document to a part
-  # If title is not given, it is a part_has_document, else it is a part_documents entry
-  attachDocument(id: UUID!, key: String!, title: String, document: JSON!): Boolean!
-  # Adds a sub-part to a part at a path
-  partHasPart(parent: UUID!, child: UUID!, path: String!): Boolean!
-  # Adds a file to a part, potentially at a path
-  partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
-  # Create a new part with the given input
-  createPart(partInput: NewPartInput!): Part!
-}
-
-scalar Int64
-scalar Time
-scalar UUID
-scalar JSON
-
-# Archive contains identifying info and the relationship to its part if it's been successfully extracted
-type Archive {
-  sha256: String!
-  Size: Int64
-  part_id: UUID
-  # part requests the part this archive contained
-  part: Part
-  md5: String
-  sha1: String
-  name: String
-  insert_date: Time!
-}
-
+# ArchiveDistance is a tuple containing an archive, and it's distance from a search term.
 # ArchiveDistance is a tuple containing an archive, and it's distance from a search term.
 type ArchiveDistance {
   distance: Int64!
@@ -910,38 +944,10 @@ type ArchiveDistance {
 }
 
 # SubPart is a tuple containing a part, and it's path within a parent part
+# SubPart is a tuple containing a part, and it's path within a parent part
 type SubPart {
   path: String!
   part: Part!
-}
-
-# Part represents a software part
-type Part {
-  id: UUID!
-  type: String!
-  name: String
-  version: String
-  label: String
-  family_name: String
-  file_verification_code: String
-  size: Int64
-  license: String
-  license_rationale: JSON
-  description: String
-  # comprised is the ID of another part that builds this part
-  comprised: UUID
-  # aliases requests the list of aliases for this part
-  aliases: [String!]
-  # profiles requests the list of profiles for this part
-  profiles: [Profile!]
-  # sub_parts requests the list of other parts this part contains
-  sub_parts: [SubPart!]
-}
-
-type PartList {
-  id: Int64!
-  name: String!
-  parent_id: Int64
 }
 
 # TODO replace UploadedArchive with just Archive
@@ -951,14 +957,10 @@ type UploadedArchive {
   archive: Archive
 }
 
-type Profile {
-  key: String!
-  documents: [Document!]!
-}
-
-type Document {
-  title: String
-  document: JSON!
+type PartList {
+  id: Int64!
+  name: String!
+  parent_id: Int64
 }`, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
@@ -1021,10 +1023,10 @@ func (ec *executionContext) field_Mutation_attachDocument_args(ctx context.Conte
 		}
 	}
 	args["title"] = arg2
-	var arg3 string
+	var arg3 model.Json
 	if tmp, ok := rawArgs["document"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("document"))
-		arg3, err = ec.unmarshalNJSON2string(ctx, tmp)
+		arg3, err = ec.unmarshalNJSON2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐJson(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1637,8 +1639,8 @@ func (ec *executionContext) fieldContext_Archive_sha256(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Archive_Size(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Archive_Size(ctx, field)
+func (ec *executionContext) _Archive_size(ctx context.Context, field graphql.CollectedField, obj *model.Archive) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Archive_size(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1665,7 +1667,7 @@ func (ec *executionContext) _Archive_Size(ctx context.Context, field graphql.Col
 	return ec.marshalOInt642int64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Archive_Size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Archive_size(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Archive",
 		Field:      field,
@@ -2044,8 +2046,8 @@ func (ec *executionContext) fieldContext_ArchiveDistance_archive(ctx context.Con
 			switch field.Name {
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
-			case "Size":
-				return ec.fieldContext_Archive_Size(ctx, field)
+			case "size":
+				return ec.fieldContext_Archive_size(ctx, field)
 			case "part_id":
 				return ec.fieldContext_Archive_part_id(ctx, field)
 			case "part":
@@ -2132,9 +2134,9 @@ func (ec *executionContext) _Document_document(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(model.Json)
 	fc.Result = res
-	return ec.marshalNJSON2string(ctx, field.Selections, res)
+	return ec.marshalNJSON2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐJson(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Document_document(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2438,8 +2440,8 @@ func (ec *executionContext) fieldContext_Mutation_updateArchive(ctx context.Cont
 			switch field.Name {
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
-			case "Size":
-				return ec.fieldContext_Archive_Size(ctx, field)
+			case "size":
+				return ec.fieldContext_Archive_size(ctx, field)
 			case "part_id":
 				return ec.fieldContext_Archive_part_id(ctx, field)
 			case "part":
@@ -2686,7 +2688,7 @@ func (ec *executionContext) _Mutation_attachDocument(ctx context.Context, field 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().AttachDocument(rctx, fc.Args["id"].(string), fc.Args["key"].(string), fc.Args["title"].(*string), fc.Args["document"].(string))
+		return ec.resolvers.Mutation().AttachDocument(rctx, fc.Args["id"].(string), fc.Args["key"].(string), fc.Args["title"].(*string), fc.Args["document"].(model.Json))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3324,7 +3326,7 @@ func (ec *executionContext) _Part_license_rationale(ctx context.Context, field g
 	}
 	res := resTmp.(*string)
 	fc.Result = res
-	return ec.marshalOJSON2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Part_license_rationale(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3334,7 +3336,7 @@ func (ec *executionContext) fieldContext_Part_license_rationale(ctx context.Cont
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type JSON does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3818,8 +3820,8 @@ func (ec *executionContext) fieldContext_Query_archive(ctx context.Context, fiel
 			switch field.Name {
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
-			case "Size":
-				return ec.fieldContext_Archive_Size(ctx, field)
+			case "size":
+				return ec.fieldContext_Archive_size(ctx, field)
 			case "part_id":
 				return ec.fieldContext_Archive_part_id(ctx, field)
 			case "part":
@@ -4036,8 +4038,8 @@ func (ec *executionContext) fieldContext_Query_archives(ctx context.Context, fie
 			switch field.Name {
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
-			case "Size":
-				return ec.fieldContext_Archive_Size(ctx, field)
+			case "size":
+				return ec.fieldContext_Archive_size(ctx, field)
 			case "part_id":
 				return ec.fieldContext_Archive_part_id(ctx, field)
 			case "part":
@@ -4809,8 +4811,8 @@ func (ec *executionContext) fieldContext_UploadedArchive_archive(ctx context.Con
 			switch field.Name {
 			case "sha256":
 				return ec.fieldContext_Archive_sha256(ctx, field)
-			case "Size":
-				return ec.fieldContext_Archive_Size(ctx, field)
+			case "size":
+				return ec.fieldContext_Archive_size(ctx, field)
 			case "part_id":
 				return ec.fieldContext_Archive_part_id(ctx, field)
 			case "part":
@@ -6893,9 +6895,9 @@ func (ec *executionContext) _Archive(ctx context.Context, sel ast.SelectionSet, 
 				return innerFunc(ctx)
 
 			})
-		case "Size":
+		case "size":
 
-			out.Values[i] = ec._Archive_Size(ctx, field, obj)
+			out.Values[i] = ec._Archive_size(ctx, field, obj)
 
 		case "part_id":
 			field := field
@@ -8290,13 +8292,19 @@ func (ec *executionContext) marshalNInt642int64(ctx context.Context, sel ast.Sel
 	return res
 }
 
-func (ec *executionContext) unmarshalNJSON2string(ctx context.Context, v interface{}) (string, error) {
-	res, err := graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNJSON2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐJson(ctx context.Context, v interface{}) (model.Json, error) {
+	res, err := model.UnmarshalJson(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNJSON2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
+func (ec *executionContext) marshalNJSON2wrsᚋtkᚋpackagesᚋgraphqlᚋmodelᚐJson(ctx context.Context, sel ast.SelectionSet, v model.Json) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	res := model.MarshalJson(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -8924,22 +8932,6 @@ func (ec *executionContext) marshalOInt642ᚖint64(ctx context.Context, sel ast.
 		return graphql.Null
 	}
 	res := graphql.MarshalInt64(*v)
-	return res
-}
-
-func (ec *executionContext) unmarshalOJSON2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalString(v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOJSON2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	res := graphql.MarshalString(*v)
 	return res
 }
 

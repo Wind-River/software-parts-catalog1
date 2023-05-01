@@ -2,6 +2,58 @@
 #
 # https://gqlgen.com/getting-started/
 
+scalar Upload
+scalar Int64
+scalar Time
+scalar UUID
+scalar JSON
+
+# Archive contains identifying info and the relationship to its part if it's been successfully extracted
+type Archive {
+  sha256: String!
+  size: Int64
+  part_id: UUID
+  # part requests the part this archive contained
+  part: Part
+  md5: String
+  sha1: String
+  name: String
+  insert_date: Time!
+}
+
+# Part represents a software part
+type Part {
+  id: UUID!
+  type: String!
+  name: String
+  version: String
+  label: String
+  family_name: String
+  file_verification_code: String
+  size: Int64
+  license: String
+  license_rationale: String
+  description: String
+  # comprised is the ID of another part that builds this part
+  comprised: UUID
+  # aliases requests the list of aliases for this part
+  aliases: [String!]
+  # profiles requests the list of profiles for this part
+  profiles: [Profile!]
+  # sub_parts requests the list of other parts this part contains
+  sub_parts: [SubPart!]
+}
+
+type Profile {
+  key: String!
+  documents: [Document!]!
+}
+
+type Document {
+  title: String
+  document: JSON!
+}
+
 type Query {
   # archive returns the archive matching the given sha256 exactly, or matching the given name exactly if sha256 was not given or found
   archive(sha256: String, name: String): Archive
@@ -27,7 +79,35 @@ type Query {
   profile(id: UUID, key: String): [Document!]
 }
 
-scalar Upload
+type Mutation {
+  # addPartList creates a new part list with the given parent, or a root part if no parent given
+  addPartList(name: String!, parent_id: Int64): PartList!
+  # deletPartList deletes the given empty part list
+  deletePartList(id: Int64!): PartList!
+  # deletePartFromList removes the given part from the given list
+  deletePartFromList(list_id: Int64!, part_id: UUID!): PartList!
+  # Upload an archive to be processed into a part
+  uploadArchive(file: Upload!, name: String): UploadedArchive!
+  # Updates the part associated with the given archive
+  # An error will be returned if the associated part hasn't been created yet
+  updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
+  # updatePartLists adds a list of parts to the given part
+  updatePartList(id: Int64!, name: String, parts: [UUID]): PartList!
+  # Update the given part with non-nil and non-zero fields
+  updatePart(partInput: PartInput): Part
+  # Create a part alias
+  createAlias(id: UUID!, alias: String!): UUID!
+  # Attach a document to a part
+  # If title is not given, it is a part_has_document, else it is a part_documents entry
+  attachDocument(id: UUID!, key: String!, title: String, document: JSON!): Boolean!
+  # Adds a sub-part to a part at a path
+  partHasPart(parent: UUID!, child: UUID!, path: String!): Boolean!
+  # Adds a file to a part, potentially at a path
+  partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
+  # Create a new part with the given input
+  createPart(partInput: NewPartInput!): Part!
+}
+
 
 # PartInput contains the editable fields of the Part type
 input PartInput {
@@ -69,53 +149,7 @@ input SearchCosts {
   max_distance: Int # Default 75; if set to -1 makes levenshtein_less_equal act like levenshtein
 }
 
-type Mutation {
-  # addPartList creates a new part list with the given parent, or a root part if no parent given
-  addPartList(name: String!, parent_id: Int64): PartList!
-  # deletPartList deletes the given empty part list
-  deletePartList(id: Int64!): PartList!
-  # deletePartFromList removes the given part from the given list
-  deletePartFromList(list_id: Int64!, part_id: UUID!): PartList!
-  # Upload an archive to be processed into a part
-  uploadArchive(file: Upload!, name: String): UploadedArchive!
-  # Updates the part associated with the given archive
-  # An error will be returned if the associated part hasn't been created yet
-  updateArchive(sha256: String!, license: String, licenseRationale: String, familyString: String): Archive
-  # updatePartLists adds a list of parts to the given part
-  updatePartList(id: Int64!, name: String, parts: [UUID]): PartList!
-  # Update the given part with non-nil and non-zero fields
-  updatePart(partInput: PartInput): Part
-  # Create a part alias
-  createAlias(id: UUID!, alias: String!): UUID!
-  # Attach a document to a part
-  # If title is not given, it is a part_has_document, else it is a part_documents entry
-  attachDocument(id: UUID!, key: String!, title: String, document: JSON!): Boolean!
-  # Adds a sub-part to a part at a path
-  partHasPart(parent: UUID!, child: UUID!, path: String!): Boolean!
-  # Adds a file to a part, potentially at a path
-  partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
-  # Create a new part with the given input
-  createPart(partInput: NewPartInput!): Part!
-}
-
-scalar Int64
-scalar Time
-scalar UUID
-scalar JSON
-
-# Archive contains identifying info and the relationship to its part if it's been successfully extracted
-type Archive {
-  sha256: String!
-  Size: Int64
-  part_id: UUID
-  # part requests the part this archive contained
-  part: Part
-  md5: String
-  sha1: String
-  name: String
-  insert_date: Time!
-}
-
+# ArchiveDistance is a tuple containing an archive, and it's distance from a search term.
 # ArchiveDistance is a tuple containing an archive, and it's distance from a search term.
 type ArchiveDistance {
   distance: Int64!
@@ -123,38 +157,10 @@ type ArchiveDistance {
 }
 
 # SubPart is a tuple containing a part, and it's path within a parent part
+# SubPart is a tuple containing a part, and it's path within a parent part
 type SubPart {
   path: String!
   part: Part!
-}
-
-# Part represents a software part
-type Part {
-  id: UUID!
-  type: String!
-  name: String
-  version: String
-  label: String
-  family_name: String
-  file_verification_code: String
-  size: Int64
-  license: String
-  license_rationale: JSON
-  description: String
-  # comprised is the ID of another part that builds this part
-  comprised: UUID
-  # aliases requests the list of aliases for this part
-  aliases: [String!]
-  # profiles requests the list of profiles for this part
-  profiles: [Profile!]
-  # sub_parts requests the list of other parts this part contains
-  sub_parts: [SubPart!]
-}
-
-type PartList {
-  id: Int64!
-  name: String!
-  parent_id: Int64
 }
 
 # TODO replace UploadedArchive with just Archive
@@ -164,12 +170,8 @@ type UploadedArchive {
   archive: Archive
 }
 
-type Profile {
-  key: String!
-  documents: [Document!]!
-}
-
-type Document {
-  title: String
-  document: JSON!
+type PartList {
+  id: Int64!
+  name: String!
+  parent_id: Int64
 }

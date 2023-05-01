@@ -64,6 +64,9 @@ models:
   Int64:
     model:
       - github.com/99designs/gqlgen/graphql.Int64
+  JSON:
+    model:
+      - wrs/tk/packages/graphql/model.Json
   Archive:
     fields:
       license:
