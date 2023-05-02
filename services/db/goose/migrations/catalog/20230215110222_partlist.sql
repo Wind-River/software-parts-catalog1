@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS partlist(
    id BIGSERIAL PRIMARY KEY,
    name TEXT NOT NULL,
-   parent_id BIGINT REFERENCES partlist(id)
+   parent_id BIGINT REFERENCES partlist(id) ON DELETE CASCADE
 );
 
 --
