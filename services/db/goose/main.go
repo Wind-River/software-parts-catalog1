@@ -9,10 +9,6 @@ import (
 	"log"
 	"os"
 
-	// _ "wrs/highlander/migrate/goose/migrations/highlander"
-
-	_ "wrs/tkdb/goose/migrations/tkdb"
-
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/pressly/goose/v3"
 )

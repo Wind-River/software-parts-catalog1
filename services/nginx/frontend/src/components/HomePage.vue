@@ -87,7 +87,7 @@ const result = useQuery({
   find_archive(query: $searchQuery, method: "fast"){
     archive{
       sha256
-      Size
+      size
       md5
       sha1
       name

@@ -5,7 +5,7 @@
       <v-card class="d-flex flex-column pa-4 mt-4 bg-secondary w-75">
         <h3 class="px-8">Upload Parts</h3>
         <Upload
-          type="application/*,.bz2,.xz"
+          type="application/*,.7z,.apk,.ar,.arj,.bz2,.cpio,.deb,.dump,.gem,.gz,.jar,.lzma,.pack,.pack2000,.rpm,.snz,.tar,.tgz,.whl,.xz,.z,.zip"
           message="Click to select files"
           icon="mdi-upload"
           :processing="processing"
@@ -103,7 +103,7 @@ const uploadMutation = useMutation(`
       archive{
         sha256
         sha1
-        Size
+        size
         md5
         insert_date
         part_id
@@ -135,7 +135,7 @@ const archiveQuery = useQuery({
     archive(name: $archiveName){
       sha256
       sha1
-      Size
+      size
       md5
       insert_date
       part_id
