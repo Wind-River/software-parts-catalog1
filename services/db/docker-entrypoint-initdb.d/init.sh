@@ -27,7 +27,7 @@ EOSQL
 # Run any restorations on catalog
 if [ -d $initdir/restore/catalog ]; then
     echo "checking restores for catalog"
-    for i in $initdir/restore/cotolag/*; do
+    for i in $initdir/restore/catalog/*; do
         if [[ "$i" == *.sh ]]; then
             echo "running script $i"
             source $i
