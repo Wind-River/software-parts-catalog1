@@ -4,7 +4,7 @@ import {ref, Ref} from "vue"
 // ## Graphql Schema Definition
 // type Archive {
 //     sha256: String!
-//     Size: Int64
+//     size: Int64
 //     part_id: UUID
 //     part: Part
 //     md5: String
@@ -24,7 +24,7 @@ type SearchResult = {
         name: string
         sha1: string
         sha256: string
-        Size: number
+        size: number
         md5: string
     }
     distance: number
