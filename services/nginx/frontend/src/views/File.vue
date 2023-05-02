@@ -103,7 +103,7 @@ const uploadMutation = useMutation(`
       archive{
         sha256
         sha1
-        Size
+        size
         md5
         insert_date
         part_id
@@ -135,7 +135,7 @@ const archiveQuery = useQuery({
     archive(name: $archiveName){
       sha256
       sha1
-      Size
+      size
       md5
       insert_date
       part_id

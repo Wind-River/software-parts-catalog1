@@ -1,19 +1,29 @@
 <!-- This page displays profile information such as cve list or bug list -->
 <template>
-  <v-container>
+  <v-container style="max-width:100%;">
     <h3 v-if="profileFetching">Fetching...</h3>
     <h3 v-if="profileError">Error...</h3>
-    <h3 v-if="profileData && JSON.parse(profileData.profile[0].document).label">
-      {{ JSON.parse(profileData.profile[0].document).label }}
+    <h3 v-if="profileData && profileData.profile[0].document.label">
+      {{ profileData.profile[0].document.label }}
     </h3>
-    <v-table v-if="profileData">
+    <v-table v-if="profileData" fixed-header>
       <thead>
         <tr>
           <th
             class="bg-primary"
             v-if="profileKey === 'security'"
             v-for="(field, index) in Object.keys(
-              JSON.parse(profileData.profile[0].document).cve_list[0],
+              profileData.profile[0].document.cve_list[0],
+            )"
+            :key="index"
+          >
+            {{ field }}
+          </th>
+          <th
+            class="bg-primary"
+            v-if="profileKey === 'licensing'"
+            v-for="(field, index) in Object.keys(
+              profileData.profile[0].document.license_analysis[0],
             )"
             :key="index"
           >
@@ -23,7 +33,7 @@
             class="bg-primary"
             v-if="profileKey === 'quality'"
             v-for="(field, index) in Object.keys(
-              JSON.parse(profileData.profile[0].document).bug_list[0],
+              profileData.profile[0].document.bug_list[0],
             )"
             :key="index"
           >
@@ -32,20 +42,28 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-if="profileKey === 'security'" v-for="(cve, index) in JSON.parse(profileData.profile[0].document).cve_list" :key="index">
+        <tr v-if="profileKey === 'security'" v-for="(cve, index) in profileData.profile[0].document.cve_list" :key="index">
           <td
             v-for="(value, index) in Object.values(cve)"
             :index="index"
           >
-            {{ value }}
+            {{ value? value : "None" }}
           </td>
         </tr>
-        <tr v-if="profileKey === 'quality'" v-for="(bug, index) in JSON.parse(profileData.profile[0].document).bug_list" :key="index">
+        <tr v-if="profileKey === 'licensing'" v-for="(license, index) in profileData.profile[0].document.license_analysis" :key="index">
+          <td
+            v-for="(value, index) in Object.values(license)"
+            :index="index"
+          >
+            {{ value? value : "None" }}
+          </td>
+        </tr>
+        <tr v-if="profileKey === 'quality'" v-for="(bug, index) in profileData.profile[0].document.bug_list" :key="index">
           <td
             v-for="(value, index) in Object.values(bug)"
             :index="index"
           >
-            {{ value }}
+            {{ value? value : "None" }}
           </td>
         </tr>
       </tbody>

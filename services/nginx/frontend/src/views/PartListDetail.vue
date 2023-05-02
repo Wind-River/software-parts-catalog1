@@ -40,7 +40,7 @@
             :key="index"
           >
             <td style="cursor: pointer" @click="redirect(item.id)">
-              {{ item.name }}
+              {{ item.label }}
             </td>
             <td>{{ item.license }}</td>
             <td>{{ item.file_verification_code.substring(14, 24) }}</td>
