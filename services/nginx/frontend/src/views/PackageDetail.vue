@@ -34,8 +34,12 @@
             </thead>
             <tbody>
               <tr>
-                <td class="font-weight-bold">Name</td>
-                <td>{{ partData.part.name }}</td>
+                <td class="font-weight-bold">Name/Version</td>
+                <td>{{ partData.part.name }}/{{ partData.part.version }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold">Type</td>
+                <td>{{  partData.part.type }}</td>
               </tr>
               <tr>
                 <td class="font-weight-bold">File Count</td>
@@ -45,12 +49,6 @@
                 <td class="font-weight-bold">License</td>
                 <td>
                   {{ partData.part.license }}
-                </td>
-              </tr>
-              <tr>
-                <td class="font-weight-bold">Rationale</td>
-                <td>
-                  {{ partData.part.license_rationale }}
                 </td>
               </tr>
               <tr>
@@ -204,6 +202,7 @@
         <tr>
           <th class="bg-primary">Name</th>
           <th class="bg-primary">Insert Date</th>
+          <th class="bg-primary">Size</th>
           <th class="bg-primary">Checksum</th>
           <th class="bg-primary"></th>
         </tr>
@@ -212,6 +211,7 @@
         <tr v-for="(archive, index) in partData.archives" :key="index">
           <td>{{ archive.name }}</td>
           <td>{{ new Date(archive.insert_date).toLocaleDateString() }}</td>
+          <td>{{ (archive.size/(1024*1024)).toFixed(2) + "MB" }}</td>
           <td>
             <CopyText
               :copytext="archive.sha256 ? archive.sha256 : archive.sha1"
@@ -292,6 +292,7 @@ const fileCollectionQuery = useQuery({
     sha256
     sha1
     insert_date
+    size
   }
   file_count(id: $pid)
 }

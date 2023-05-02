@@ -26,7 +26,7 @@
         striped
         color="primary"
       ></v-progress-linear>
-      <h3 v-if="queryError">{{queryError.networkError? "Network Unavailable": "Too Many Results"}}</h3>
+      <h3 v-if="queryError">{{queryError.networkError? "Network Unavailable": queryError.message}}</h3>
       <h3 v-if="data && data.find_archive.length < 1" class="my-4">
         No results found
       </h3>
