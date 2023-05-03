@@ -459,3 +459,16 @@ type archiveMessage struct {
 	archive       *Archive
 	returnChannel chan error
 }
+
+// DeleteArchive deletes the aliases and archive entries for the given sha256
+func (controller *ArchiveController) DeleteArchive(sha256 hash.Sha256) error {
+	if _, err := controller.DB.Exec(`DELETE FROM archive_alias WHERE archive_sha256=$1`, sha256); err != nil {
+		return errors.Wrapf(err, "error deleting archive_alias %x", sha256)
+	}
+
+	if _, err := controller.DB.Exec(`DELETE FROM archive WHERE sha256=$1`, sha256); err != nil {
+		return errors.Wrapf(err, "error deleting archive %x", sha256)
+	}
+
+	return nil
+}

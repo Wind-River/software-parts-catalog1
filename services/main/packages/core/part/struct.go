@@ -399,3 +399,60 @@ func (controller PartController) CreatePart(part Part) (*Part, error) {
 
 	return &newPart, nil
 }
+
+// DeletePart deletes the given part
+// Any existing archive or comprised relationships will be set t onull
+func (controller PartController) DeletePart(partID ID) error {
+	if partID == ID(uuid.Nil) {
+		return errors.New("DeletePart was given a nil ID")
+	}
+
+	// Get part to check that it exists
+	if _, err := controller.GetByID(partID); err != nil {
+		return err
+	}
+
+	// Remove archive relationship if any
+	if _, err := controller.DB.Exec(`UPDATE archive SET part_id=NULL WHERE part_id=$1`, partID); err != nil {
+		return errors.Wrapf(err, "error unsetting archive part_id %s", partID)
+	}
+	// Delete part_alias
+	if _, err := controller.DB.Exec(`DELETE FROM part_alias WHERE part_id=$1`, partID); err != nil {
+		return errors.Wrapf(err, "error deleting aliases of part %s", partID)
+	}
+	// Unset comprised
+	if _, err := controller.DB.Exec(`UPDATE part SET comprised=NULL WHERE comprised=$1`, partID); err != nil {
+		return errors.Wrapf(err, "error removing %s from comprised fields", partID)
+	}
+	// Delete documents
+	if _, err := controller.DB.Exec(`DELETE FROM part_has_document WHERE part_id=$1`, partID); err != nil {
+		return errors.Wrapf(err, "error deleting part_has_document of %s", partID)
+	}
+	if _, err := controller.DB.Exec(`DELETE FROM part_documents WHERE part_id=$1`, partID); err != nil {
+		return errors.Wrapf(err, "error deleting part_has_documents of %s", partID)
+	}
+	// Delete file relations
+	if _, err := controller.DB.Exec(`DELETE FROM part_has_file WHERE part_id=$1`, partID); err != nil {
+		return errors.Wrapf(err, "error deleting files from %s", partID)
+	}
+	// Remove from partlist // TOOD should this be a call to partlistcontroller?
+	if _, err := controller.DB.Exec(`DELETE FROM partlist_has_part WHERE part_id=$1`, partID); err != nil {
+		return errors.Wrapf(err, "error deleting part %s from partlists", partID)
+	}
+	// Delete sub-parts
+	subParts, err := controller.SubParts(partID)
+	if err != nil {
+		return err
+	}
+	for _, subPart := range subParts {
+		if err := controller.DeletePart(subPart.ID); err != nil {
+			return err
+		}
+	}
+	// Delete part
+	if _, err := controller.DB.Exec(`DELETE FROM part WHERE part_id=$1`, partID); err != nil {
+		return errors.Wrapf(err, "error deleting part %s", partID)
+	}
+
+	return nil
+}
