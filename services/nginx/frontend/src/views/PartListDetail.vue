@@ -189,7 +189,7 @@ function addParts() {
 function downloadCSV() {
   download(
     Papa.unparse(parts.value.partlist_parts),
-    parts.value.partlist.name + "-" + new Date().toISOString(),
+    parts.value.partlist.name + "-" + new Date().toISOString().slice(0,length-8),
     "text/csv",
   )
 }
