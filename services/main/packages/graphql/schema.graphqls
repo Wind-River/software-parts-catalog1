@@ -106,6 +106,9 @@ type Mutation {
   partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
   # Create a new part with the given input
   createPart(partInput: NewPartInput!): Part!
+  # Delete the given part
+  # Currently will automatically delete all relations required to achieve this
+  deletePart(part_id: UUID!): Boolean!
 }
 
 

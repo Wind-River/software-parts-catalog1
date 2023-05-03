@@ -412,6 +412,34 @@ func (r *mutationResolver) CreatePart(ctx context.Context, partInput model.NewPa
 	return &ret, nil
 }
 
+// DeletePart is the resolver for the deletePart field.
+func (r *mutationResolver) DeletePart(ctx context.Context, partID string) (bool, error) {
+	uuid, err := uuid.Parse(partID)
+	if err != nil {
+		return false, errWrapper.Wrapf(err, "error parsing partID")
+	}
+
+	// Delete archives
+	archives, err := r.ArchiveController.GetByPart(part.ID(uuid))
+	if err != nil {
+		return false, err
+	}
+	for _, archive := range archives {
+		log.Debug().Str("UUID", uuid.String()).Hex("sha256", archive.Sha256[:]).Msg("Deleting Archive to delete Part")
+		if err := r.ArchiveController.DeleteArchive(archive.Sha256); err != nil {
+			return false, err
+		}
+	}
+
+	log.Debug().Str("UUID", uuid.String()).Msg("Deleting Part")
+	// Delete Part
+	if err := r.PartController.DeletePart(part.ID(uuid)); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 // ID is the resolver for the id field.
 func (r *partResolver) ID(ctx context.Context, obj *model.Part) (string, error) {
 	return obj.ID.String(), nil

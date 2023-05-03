@@ -73,6 +73,7 @@ type ComplexityRoot struct {
 		AttachDocument     func(childComplexity int, id string, key string, title *string, document model.Json) int
 		CreateAlias        func(childComplexity int, id string, alias string) int
 		CreatePart         func(childComplexity int, partInput model.NewPartInput) int
+		DeletePart         func(childComplexity int, partID string) int
 		DeletePartFromList func(childComplexity int, listID int64, partID string) int
 		DeletePartList     func(childComplexity int, id int64) int
 		PartHasFile        func(childComplexity int, id string, fileSha256 string, path *string) int
@@ -157,6 +158,7 @@ type MutationResolver interface {
 	PartHasPart(ctx context.Context, parent string, child string, path string) (bool, error)
 	PartHasFile(ctx context.Context, id string, fileSha256 string, path *string) (bool, error)
 	CreatePart(ctx context.Context, partInput model.NewPartInput) (*model.Part, error)
+	DeletePart(ctx context.Context, partID string) (bool, error)
 }
 type PartResolver interface {
 	ID(ctx context.Context, obj *model.Part) (string, error)
@@ -329,6 +331,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreatePart(childComplexity, args["partInput"].(model.NewPartInput)), true
+
+	case "Mutation.deletePart":
+		if e.complexity.Mutation.DeletePart == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deletePart_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeletePart(childComplexity, args["part_id"].(string)), true
 
 	case "Mutation.deletePartFromList":
 		if e.complexity.Mutation.DeletePartFromList == nil {
@@ -893,6 +907,9 @@ type Mutation {
   partHasFile(id: UUID!, file_sha256: String!, path: String): Boolean!
   # Create a new part with the given input
   createPart(partInput: NewPartInput!): Part!
+  # Delete the given part
+  # Currently will automatically delete all relations required to achieve this
+  deletePart(part_id: UUID!): Boolean!
 }
 
 
@@ -1110,6 +1127,21 @@ func (ec *executionContext) field_Mutation_deletePartList_args(ctx context.Conte
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deletePart_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["part_id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("part_id"))
+		arg0, err = ec.unmarshalNUUID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["part_id"] = arg0
 	return args, nil
 }
 
@@ -2920,6 +2952,61 @@ func (ec *executionContext) fieldContext_Mutation_createPart(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createPart_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deletePart(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_deletePart(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeletePart(rctx, fc.Args["part_id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deletePart(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deletePart_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -7172,6 +7259,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createPart(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deletePart":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deletePart(ctx, field)
 			})
 
 			if out.Values[i] == graphql.Null {
