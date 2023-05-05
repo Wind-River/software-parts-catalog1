@@ -19,15 +19,14 @@
           >
             {{ field }}
           </th>
-          <th
-            class="bg-primary"
-            v-if="profileKey === 'licensing'"
-            v-for="(field, index) in Object.keys(
-              profileData.profile[0].document.license_analysis[0],
-            )"
-            :key="index"
-          >
-            {{ field }}
+          <th class="bg-primary" v-if="profileKey === 'licensing'">
+            license_expression
+          </th>
+          <th class="bg-primary" v-if="profileKey === 'licensing'">
+            analysis_type
+          </th>
+          <th class="bg-primary" v-if="profileKey === 'licensing'">
+            comments
           </th>
           <th
             class="bg-primary"
@@ -51,11 +50,14 @@
           </td>
         </tr>
         <tr v-if="profileKey === 'licensing'" v-for="(license, index) in profileData.profile[0].document.license_analysis" :key="index">
-          <td
-            v-for="(value, index) in Object.values(license)"
-            :index="index"
-          >
-            {{ value? value : "None" }}
+          <td>
+            {{ license.license_expression? license.license_expression : "None" }}
+          </td>
+          <td>
+            {{ license.analysis_type? license.analysis_type : "None" }}
+          </td>
+          <td>
+            {{ license.comments? license.comments : "None" }}
           </td>
         </tr>
         <tr v-if="profileKey === 'quality'" v-for="(bug, index) in profileData.profile[0].document.bug_list" :key="index">
