@@ -38,12 +38,10 @@
                 <td>{{ partData.part.name }}/{{ partData.part.version }}</td>
               </tr>
               <tr>
-                <td class="font-weight-bold">Type</td>
-                <td>{{  partData.part.type }}</td>
-              </tr>
-              <tr>
-                <td class="font-weight-bold">File Count</td>
-                <td>{{ partData.file_count }}</td>
+                <td class="font-weight-bold">Description</td>
+                <td>
+                  {{ partData.part.description }}
+                </td>
               </tr>
               <tr>
                 <td class="font-weight-bold">License</td>
@@ -52,10 +50,12 @@
                 </td>
               </tr>
               <tr>
-                <td class="font-weight-bold">Description</td>
-                <td>
-                  {{ partData.part.description }}
-                </td>
+                <td class="font-weight-bold">Type</td>
+                <td>{{  partData.part.type }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold">File Count</td>
+                <td>{{ partData.file_count }}</td>
               </tr>
               <tr>
                 <td class="font-weight-bold">Verification Code</td>
