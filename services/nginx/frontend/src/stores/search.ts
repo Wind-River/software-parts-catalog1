@@ -18,7 +18,8 @@ type SearchResult = {
         part_id: string
         part: {
             license: string
-            automation_license: string
+            label: string
+            type: string
         }
         insert_date: string
         name: string

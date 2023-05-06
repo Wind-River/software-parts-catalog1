@@ -33,14 +33,14 @@
     </div>
   </v-row>
   <v-row v-if="searchStore.results && searchStore.results.length > 0" class="justify-center">
-    <v-table class="mx-8" density="compact">
+    <v-table class="mx-8" density="compact" style="min-width:75%">
       <thead>
         <tr>
           <th class="bg-primary">{{ searchStore.results.length }}</th>
-          <th class="bg-primary">Name</th>
+          <th class="bg-primary">Part</th>
+          <th class="bg-primary">Type</th>
           <th class="bg-primary">License</th>
           <th class="bg-primary">Date</th>
-          <th class="bg-primary">SHA256/SHA1</th>
         </tr>
       </thead>
       <tbody>
@@ -51,17 +51,11 @@
           @click="redirect(row.archive.part_id)"
         >
           <td>{{ index + 1 }}</td>
-          <td>{{ row.archive.name }}</td>
+          <td>{{ row.archive.part.label? row.archive.part.label : row.archive.name }}</td>
+          <td>{{ row.archive.part.type }}</td>
           <td>{{ row.archive.part.license? row.archive.part.license : "" }}</td>
           <td>
             {{ new Date(row.archive.insert_date).toLocaleDateString() }}
-          </td>
-          <td>
-            {{
-              row.archive.sha256
-                ? "SHA256:" + row.archive.sha256.substring(0, 10) + "..."
-                : "SHA1:" + row.archive.sha1.substring(0, 10) + "..."
-            }}
           </td>
         </tr>
       </tbody>
@@ -95,6 +89,8 @@ const result = useQuery({
       part_id
       part{
         license
+        label
+        type
       }
     }
     distance
