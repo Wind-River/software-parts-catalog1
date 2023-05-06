@@ -148,7 +148,7 @@
       </thead>
       <tbody>
         <tr>
-          <td>{{ partData.part.comprised }}</td>
+          <td @click="redirect(partData.part.comprised)" style="cursor:pointer;">{{ partData.part.comprised }}</td>
           <td>
             <v-btn
               @click="redirect(partData.part.comprised)"
