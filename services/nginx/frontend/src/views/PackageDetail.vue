@@ -51,7 +51,7 @@
               </tr>
               <tr>
                 <td class="font-weight-bold">Type</td>
-                <td>{{  partData.part.type }}</td>
+                <td>{{ partData.part.type }}</td>
               </tr>
               <tr>
                 <td class="font-weight-bold">File Count</td>
@@ -127,7 +127,7 @@
         value="subPartsTab"
         class="text-primary"
         selected-class="text-decoration-underline"
-        >Contains</v-tab
+        >Subparts</v-tab
       >
       <v-tab
         v-if="partData && partData.archives.length > 0"
@@ -136,6 +136,7 @@
         selected-class="text-decoration-underline"
         >Archives</v-tab
       >
+      <v-tab v-if="partData" value="none" style="display: none"> </v-tab>
     </v-tabs>
 
     <v-table v-if="selectedTab === 'comprisedTab'">
@@ -177,13 +178,19 @@
     <v-table v-if="selectedTab === 'subPartsTab'">
       <thead>
         <tr>
-          <th class="bg-primary">Name</th>
+          <th class="bg-primary">Part</th>
           <th class="bg-primary"></th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(subpart, index) in partData.part.sub_parts" :key="index">
-          <td>{{ subpart.part.name }}</td>
+          <td @click="redirect(subpart.part.id)" style="cursor:pointer;">
+            {{
+              subpart.part.label
+                ? subpart.part.label
+                : subpart.part.name + "-" + subpart.part.version
+            }}
+          </td>
           <td>
             <v-btn
               @click="redirect(subpart.part.id)"
@@ -211,7 +218,7 @@
         <tr v-for="(archive, index) in partData.archives" :key="index">
           <td>{{ archive.name }}</td>
           <td>{{ new Date(archive.insert_date).toLocaleDateString() }}</td>
-          <td>{{ (archive.size/(1024*1024)).toFixed(2) + "MB" }}</td>
+          <td>{{ (archive.size / (1024 * 1024)).toFixed(2) + "MB" }}</td>
           <td>
             <CopyText
               :copytext="archive.sha256 ? archive.sha256 : archive.sha1"
@@ -280,6 +287,8 @@ const fileCollectionQuery = useQuery({
       part{
         id
         name
+        version
+        label
         type
       }
     }
@@ -385,9 +394,8 @@ onBeforeRouteUpdate((to) => {
   } else {
     id = to.params.id[0]
   }
-
   pid.value = id
-  selectedTab.value = ""
+  selectedTab.value = "none"
 })
 </script>
 
