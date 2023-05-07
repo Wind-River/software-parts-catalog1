@@ -38,8 +38,8 @@
         <tr>
           <th class="bg-primary">{{ searchStore.results.length }}</th>
           <th class="bg-primary">Part</th>
-          <th class="bg-primary">Type</th>
           <th class="bg-primary">License</th>
+          <th class="bg-primary">Type</th>
           <th class="bg-primary">Date</th>
         </tr>
       </thead>
