@@ -51,9 +51,9 @@
           @click="redirect(row.archive.part_id)"
         >
           <td>{{ index + 1 }}</td>
-          <td>{{ row.archive.part.label? row.archive.part.label : row.archive.name }}</td>
-          <td>{{ row.archive.part.type }}</td>
+          <td>{{ row.archive.name }}</td>
           <td>{{ row.archive.part.license? row.archive.part.license : "" }}</td>
+          <td>{{ row.archive.part.type }}</td>
           <td>
             {{ new Date(row.archive.insert_date).toLocaleDateString() }}
           </td>
