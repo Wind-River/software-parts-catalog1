@@ -93,11 +93,18 @@
         </tr>
       </tbody>
     </v-table>
-    <v-divider v-if="profileData && profileKey === 'licensing'"></v-divider>
-    <div class="text-caption font-weight-bold mt-4" v-if="profileData && profileKey === 'licensing'">Legal Notices</div>
-    <div class="text-caption" v-if="profileData && profileKey === 'licensing'">
-      {{profileData.profile[0].document.legal_notices}}
-    </div>
+    <v-table v-if="profileData && profileKey === 'licensing'" fixed-header>
+      <thead>
+        <tr>
+          <th class="bg-primary">legal notices</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>{{ profileData.profile[0].document.legal_notices }}</td>
+        </tr>
+      </tbody>
+    </v-table>
   </v-container>
 </template>
 <script setup lang="ts">
