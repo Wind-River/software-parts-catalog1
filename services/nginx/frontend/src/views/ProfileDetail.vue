@@ -1,6 +1,6 @@
 <!-- This page displays profile information such as cve list or bug list -->
 <template>
-  <v-container style="max-width:100%;">
+  <v-container style="max-width: 100%">
     <h3 v-if="profileFetching">Fetching...</h3>
     <h3 v-if="profileError">Error...</h3>
     <h3 v-if="profileData && profileData.profile[0].document.label">
@@ -25,9 +25,7 @@
           <th class="bg-primary" v-if="profileKey === 'licensing'">
             analysis_type
           </th>
-          <th class="bg-primary" v-if="profileKey === 'licensing'">
-            comments
-          </th>
+          <th class="bg-primary" v-if="profileKey === 'licensing'">comments</th>
           <th
             class="bg-primary"
             v-if="profileKey === 'quality'"
@@ -41,35 +39,65 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-if="profileKey === 'security'" v-for="(cve, index) in profileData.profile[0].document.cve_list" :key="index">
-          <td
-            v-for="(value, index) in Object.values(cve)"
-            :index="index"
-          >
-            {{ value? value : "None" }}
+        <tr
+          v-if="profileKey === 'security'"
+          v-for="(cve, index) in profileData.profile[0].document.cve_list"
+          :key="index"
+        >
+          <td v-for="(value, index) in Object.values(cve)" :index="index">
+            {{ value ? value : "None" }}
           </td>
         </tr>
-        <tr v-if="profileKey === 'licensing'" v-for="(license, index) in profileData.profile[0].document.license_analysis" :key="index">
+        <tr
+          v-if="profileKey === 'licensing'"
+          v-for="(license, index) in profileData.profile[0].document
+            .license_analysis"
+          :key="index"
+        >
           <td>
-            {{ license.license_expression? license.license_expression : "None" }}
+            {{
+              license.license_expression ? license.license_expression : "None"
+            }}
           </td>
           <td>
-            {{ license.analysis_type? license.analysis_type : "None" }}
+            {{ license.analysis_type ? license.analysis_type : "None" }}
           </td>
           <td>
-            {{ license.comments? license.comments : "None" }}
+            {{ license.comments ? license.comments : "None" }}
           </td>
         </tr>
-        <tr v-if="profileKey === 'quality'" v-for="(bug, index) in profileData.profile[0].document.bug_list" :key="index">
-          <td
-            v-for="(value, index) in Object.values(bug)"
-            :index="index"
-          >
-            {{ value? value : "None" }}
+        <tr
+          v-if="profileKey === 'quality'"
+          v-for="(bug, index) in profileData.profile[0].document.bug_list"
+          :key="index"
+        >
+          <td v-for="(value, index) in Object.values(bug)" :index="index">
+            {{ value ? value : "None" }}
           </td>
         </tr>
       </tbody>
     </v-table>
+    <v-table v-if="profileData && profileKey === 'licensing'" fixed-header>
+      <thead>
+        <tr>
+          <th class="bg-primary">copyrights</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="(copyright, index) in profileData.profile[0].document
+            .copyrights"
+          :key="index"
+        >
+          <td>{{ copyright }}</td>
+        </tr>
+      </tbody>
+    </v-table>
+    <v-divider v-if="profileData && profileKey === 'licensing'"></v-divider>
+    <div class="text-caption font-weight-bold mt-4" v-if="profileData && profileKey === 'licensing'">Legal Notices</div>
+    <div class="text-caption" v-if="profileData && profileKey === 'licensing'">
+      {{profileData.profile[0].document.legal_notices}}
+    </div>
   </v-container>
 </template>
 <script setup lang="ts">
