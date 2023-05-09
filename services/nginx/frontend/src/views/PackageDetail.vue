@@ -148,7 +148,12 @@
       </thead>
       <tbody>
         <tr>
-          <td @click="redirect(partData.part.comprised)" style="cursor:pointer;">{{ partData.part.comprised }}</td>
+          <td
+            @click="redirect(partData.part.comprised)"
+            style="cursor: pointer"
+          >
+            {{ comprisedData.part.label? comprisedData.part.label : partData.part.comprised }}
+          </td>
           <td>
             <v-btn
               @click="redirect(partData.part.comprised)"
@@ -184,7 +189,7 @@
       </thead>
       <tbody>
         <tr v-for="(subpart, index) in partData.part.sub_parts" :key="index">
-          <td @click="redirect(subpart.part.id)" style="cursor:pointer;">
+          <td @click="redirect(subpart.part.id)" style="cursor: pointer">
             {{
               subpart.part.label
                 ? subpart.part.label
@@ -253,6 +258,8 @@ import CopyText from "@/components/CopyText.vue"
 import download from "downloadjs"
 import { onBeforeRouteUpdate, useRoute, useRouter } from "vue-router"
 import { useQuery } from "@urql/vue"
+import { computed } from "vue"
+import { watch } from "vue"
 
 type ModalPayload = {
   data: string
@@ -311,6 +318,18 @@ const fileCollectionQuery = useQuery({
 const partData = fileCollectionQuery.data
 const partError = fileCollectionQuery.error
 const partFetching = fileCollectionQuery.fetching
+
+const comprisedID = computed(() => {
+  if (!partData.value) return ""
+  return partData.value.part.comprised
+})
+
+const comprisedPart = useQuery({
+  query: `query($id: UUID){part(id: $id){label}}`,
+  variables: { id: comprisedID },
+})
+
+const comprisedData = comprisedPart.data
 
 //This section handles display of available archives, aliases, and contained parts
 const selectedTab: Ref<string> = ref("")
