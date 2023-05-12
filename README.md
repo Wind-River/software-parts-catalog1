@@ -4,7 +4,7 @@
 Maintaining a catalog of software components (parts) is a requirement whether generating SBOMs for managing license compliance, security assurance, export control, or safety certification. We developed a highly searchable scalable software parts database (catalog) enabling companies to seamlessly manage 1000s, 10,000s if not 100,000s of software parts from which their products are comprised.
 
 ## Software Parts 
-There are different ways to define what a software part is. In the most basic sense the different parts represent the building blocks from which software solutions are comprised. Software parts stored in the catalog can consist of any of the following levels of granulatity:  
+There are different ways to define what a software part is. In the most basic sense the different parts represent the building blocks from which software solutions are comprised. Software parts stored in the catalog can consist of any of the following levels of granularity:  
 - a single file (source or binary)
 - a collection for files (e.g., archive, package)
 - application/program/library binary
