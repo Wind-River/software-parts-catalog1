@@ -15,14 +15,14 @@ There are different ways to define what a software part is. In the most basic se
 ## Project Directory Structure
 ### Services
   - object-storage - The minio bucket for storage.
-  - db - the postgresql databse container and goose db migration support
+  - db - the postgresql database container and goose db migration support
   - main - the main container that runs the server holding all API endpoints.
   - nginx - The reverse proxy and file host for the frontend.
 
 
 ## Project License
 
-The source code for this project is provided under the Apache 2.0 license license. Because this project is built on other projects different files may be under different licenses. Each source file should include a license notice that designates the licensing terms for the respective file.
+The source code for this project is provided under the Apache 2.0 license. Because this project is built on other projects different files may be under different licenses. Each source file should include a license notice that designates the licensing terms for the respective file.
 
 ## Docker Compose
 The repo provides a compose.yml for a default set-up, as simple as installing the docker compose plugin and running `docker compose up`.
@@ -37,7 +37,7 @@ Use `docker compose down` to stop it, or `docker compose down -v` to also stop t
 
 ## Querying Data
 We use Graphql to provide access to our data.
-More details can be found in the [data access document](/docs/data-access.md), or at out [Graphql schema](/services/main/packages/graphql/schema.graphqls).
+More details can be found in the [data access document](/docs/data-access.md), or at our [Graphql schema](/services/main/packages/graphql/schema.graphqls).
 
 ## Persistent Data
 To persist data, you can mount volumes onto your local system.
@@ -92,7 +92,7 @@ You can then enable ssl by setting the environment variable USE_SSL to true, yes
 If you already have the catalog running, bring it down and back up again, and the Nginx config should how have ssl enabled.
 #### Configuring Secrets
 There is an example in default_secrets.
-You can create your own secrets, as "secrets", which is ingnored by the gitignore.
+You can create your own secrets, as "secrets", which is ignored by the gitignore.
 
 The db.json and blob.json are in the form
 ```json
